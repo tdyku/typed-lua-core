@@ -4,126 +4,136 @@ import           Text.Parsec.String                       (parseFromFile)
 import           Text.Parsec                              (Parsec)
 import           Text.Parsec.Char                         (letter, lower, alphaNum, string, digit, char, oneOf)
 import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, sepBy1)
-import           Text.ParserCombinators.Parsec            (Parser, many, many1, spaces, optionMaybe)
+import           Text.ParserCombinators.Parsec            (Parser, many, many1, spaces, space, optionMaybe)
 import           Control.Applicative                      ((<*>), (*>), pure)
+import           Text.Parsec.Prim                         (try)
 
 import qualified AST               as A
 import           Parser.Types      (pS, pF, pV, idVar, (<:>), (<++>))
 
 import System.Exit
 
-parse :: IO A.Stm
-parse = parseFromFile pStm "example" >>= either report return
+parse :: IO [A.Stm]
+parse = parseFromFile pManyStm "example" >>= either report return
   where
     report err = do
         putStrLn $ "Error: " ++ show err
-        exitFailure
+        return []
+
+keyword :: String -> Parser ()
+keyword x = string x >> spaces
+
+symbol :: Char -> Parser ()
+symbol x = char x >> spaces
 
 
-pStm, pSSkip, pSBlock, pSAssign, pSWhile, pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl :: Parser A.Stm
+semicolon, comma, spaces1 :: Parser ()
+semicolon = char ';' >> spaces
+comma = char ',' >> spaces
+spaces1 = space >> spaces
 
-pStm = choice [pSBlock, pSSkip,  pSAssign, pSWhile, pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl]
+pStm, pSSkip,  pSAssign, pSWhile, pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl :: Parser A.Stm
 
-pSSkip = string "skip" *> pure A.Skip
+pStm = choice [pSWhile, pSSkip, pSAssign,  pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl]
+pManyStm = pStm `sepBy` semicolon 
+pSSkip = keyword "skip" *> pure A.Skip
 
-pSBlock = A.StmBlock <$> pStm `sepBy1` char ';'
-
-pSAssign = A.StmAssign <$> pLHVal `sepBy` char ',' <*> pExprList
+pSAssign = A.StmAssign <$> pLHVal `sepBy` semicolon <*>( symbol '=' *> pExprList)
 
 pSIf = do
-	string "if"
+	keyword "if"
 	e <- pExpr
-	string "then"
-	stm1 <- pStm
-	string "else"
-	stm2 <- pStm
+	keyword "then"
+	stm1 <- pManyStm
+	keyword "else"
+	stm2 <- pManyStm
 	return $ A.StmIf e stm1 stm2
 
 pSWhile = do
-	string "while"
+	keyword "while"
 	e <- pExpr
-	string "do"
-	stm1 <- pStm
+	keyword "do"
+	stm1 <- pManyStm
 	return $ A.StmWhile e stm1
 
 pSTypedDecl = do
-	string "local"
-	typedVars <- ((,) <$> idVar <* char ':' <*> pF ) `sepBy` char ','
-	char '='
+	keyword "local"
+	typedVars <- ((,) <$> idVar <* symbol ':' <*> pF ) `sepBy` semicolon
+	symbol '='
 	exprList <- pExprList
-	string "in"
-	stm <- pStm
+	keyword "in"
+	stm <- pManyStm
 	return $ A.StmTypedVarDecl typedVars exprList stm
 
 pSDecl = do
-	string "local"
-	ids <- idVar `sepBy` char ','
-	char '='
+	keyword "local"
+	ids <- idVar `sepBy` semicolon
+	symbol '='
 	exprList <- pExprList
-	string "in"
-	stm <- pStm
+	keyword "in"
+	stm <- pManyStm
 	return $ A.StmVarDecl ids exprList stm
 
 
 pSRecDecl = do
-	string "rec"
+	keyword "rec"
 	id <- idVar
-	char ':'
+	symbol ':'
 	idType <- pF
-	char '='
+	symbol '='
 	expr <- pExpr
-	string "in"
-	stm <- pStm
+	keyword "in"
+	stm <- pManyStm
 	return $ A.StmRecDecl (id, idType) expr stm
 
-pSReturn = A.StmReturn <$> pExprList
+pSReturn = keyword "return" *> (A.StmReturn <$> pExprList)
 
-pSVoidAppl = A.StmVoidAppl <$> between (char '|') (char '|') pA 
+pSVoidAppl = A.StmVoidAppl <$> between (symbol '|') (symbol '|') pA 
 
 pSMthDecl = do
-	string "fun"
+	keyword "fun"
 	id1 <- idVar
-	char ':'
+	symbol ':'
 	id2 <- idVar
 	args <- between (char '(') (char ')') pPL
-	char ':'
+	symbol ':'
 	retType <- pS
-	body <- pStm
+	body <- pManyStm
 	return $ A.StmMthdDecl id1 id2 args retType body
 
 
 pExpr, pExpNil, pExpInt, pExpFloat, pExpString, pExpFalse, pExpTrue, pExpVar, pExpTableAccess, pExpTypeCoercion, pExpFunDecl, pExpTableConstructor, pExpABinOp, pExpBBinOp, pExpUnary, pExpOneResult :: Parser A.Expr
 
-pExpr = choice [pExpNil, pExpInt, pExpFloat, pExpString, pExpFalse, pExpTrue, pExpVar, pExpTableAccess, pExpTypeCoercion, pExpFunDecl, pExpTableConstructor, pExpABinOp, pExpBBinOp, pExpUnary, pExpOneResult]
-pExpNil = string "nil" *> pure A.ExpNil
+pExpr = choice [try pExpNil, try pExpFloat, pExpInt,  pExpString, pExpFalse, pExpTrue, try pExpTableAccess, try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor{-, pExpABinOp, pExpBBinOp-}, pExpUnary, pExpOneResult, pExpVar] <* spaces
+pExpNil = keyword "nil" *> pure A.ExpNil <* spaces1
 pExpInt = A.ExpInt <$> read <$> many1 digit
 pExpFloat = A.ExpFloat <$> read <$> many1 digit <++> (char '.' <:> many1 digit)
-pExpString = char '\"' *> (A.ExpString <$> many alphaNum) <* char '\"'
-pExpFalse = string "false" *> pure A.ExpFalse
-pExpTrue = string "true" *> pure A.ExpTrue
+pExpString = char '\"' *> (A.ExpString <$> many alphaNum) <* symbol '\"'
+pExpFalse = keyword "false" *> pure A.ExpFalse
+pExpTrue = keyword "true" *> pure A.ExpTrue
 pExpVar = A.ExpVar <$> idVar
-pExpTableAccess = A.ExpTableAccess <$> pExpr <*> between (char '[') (char ']') pExpr
-pExpTypeCoercion = A.ExpTypeCoercion <$> between (char '<' ) (char '>') pF <*> idVar
+pExpTableAccess = A.ExpTableAccess <$> idVar <*> between (symbol '[') (symbol ']') pExpr
+pExpTypeCoercion = A.ExpTypeCoercion <$> between (symbol '<' ) (symbol '>') pF <*> idVar
 pExpFunDecl = do
-	string "fun"
-	args <- between (char '(') (char ')') pPL
-	char ':'
+	keyword "fun"
+	args <- between (symbol '(') (symbol ')') pPL
+	symbol ':'
 	retType <- pS
-	body <- pStm
+	body <- pManyStm
 	return $ A.ExpFunDecl args retType body
 
 
 pExpTableConstructor = do
-	char '{'
-	exprs <- ((,) <$> between (char '[') (char ']') pExpr <* char '=' <*> pExpr) `sepBy` char ','
-	me <- optionMaybe (char ',' *> pME)
-	char '}'
+	symbol '{'
+	exprs <- ((,) <$> between (char '[') (char ']') pExpr <* char '=' <*> pExpr) `sepBy` semicolon
+	me <- optionMaybe (semicolon *> pME)
+	symbol '}'
 	return $ A.ExpTableConstructor exprs me
 
 
 pExpABinOp = do
 	e1 <- pExpr
-	op <- choice [string "+" *> pure A.Add, string ".." *> pure A.Concat, string "==" *> pure A.Equals, string "<" *> pure A.LessThan]
+	op <- choice [keyword "+" *> pure A.Add, keyword ".." *> pure A.Concat, keyword "==" *> pure A.Equals, keyword "<" *> pure A.LessThan]
 	e2 <- pExpr
 	return $ A.ExpABinOp op e1 e2
 
@@ -131,33 +141,33 @@ pExpABinOp = do
 
 pExpBBinOp = do
 	e1 <- pExpr
-	op <- choice [string "&" *> pure A.Amp, string "and" *> pure A.And, string "or" *> pure A.Or]
+	op <- choice [keyword "&" *> pure A.Amp, keyword "and" *> pure A.And, keyword "or" *> pure A.Or]
 	e2 <- pExpr
 	return $ A.ExpBBinOp op e1 e2
 
-pExpUnary = A.ExpUnaryOp <$> choice [string "not" *> pure A.Not, string "#" *> pure A.Hash] <*> pExpr
+pExpUnary = A.ExpUnaryOp <$> choice [keyword "not" *> pure A.Not, keyword "#" *> pure A.Hash] <*> pExpr
 
-pExpOneResult = A.ExpOneResult <$> between (char '|') (char '|') pME
+pExpOneResult = A.ExpOneResult <$> between (symbol '|') (symbol '|') pME
 
 pLHVal, pLHId, pTableVal, pTypeCoercionVal :: Parser A.LHVal
 pLHVal = choice [pLHId, pTableVal, pTypeCoercionVal]
 pLHId = A.IdVal <$> idVar
-pTableVal = A.TableVal <$> pExpr <*> between (char '[') (char ']') pExpr
-pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (char '[') (char ']') pExpr <*> between (char '<') (char '>') pV
+pTableVal = A.TableVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr
+pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr <*> between (symbol '<') (symbol '>') pV
 
 
 pExprList :: Parser A.ExprList
-pExprList = A.ExprList <$> pExpr `sepBy` char ',' <*> optionMaybe (char ',' *> pME)
+pExprList = A.ExprList <$> pExpr `sepBy` semicolon <*> optionMaybe (semicolon *> pME)
 
 
 pME :: Parser A.MultResult
-pME = choice [A.ResultAppl <$> pA, string "..." *> pure A.ResultVarArg]
+pME = choice [A.ResultAppl <$> pA, keyword "..." *> pure A.ResultVarArg]
 
 
 pA, pFunApp, pMthdApp :: Parser A.Appl
 pA = choice [pFunApp, pMthdApp]
-pFunApp = A.FunAppl <$> pExpr <*> between (char '(') (char ')') pExprList
-pMthdApp = A.MthdAppl <$> pExpr <* char ':' <*> idVar <*> between (char '(') (char ')') pExprList
+pFunApp = A.FunAppl <$> pExpr <*> between (symbol '(') (symbol ')') pExprList
+pMthdApp = A.MthdAppl <$> pExpr <* symbol ':' <*> idVar <*> between (symbol '(') (symbol ')') pExprList
 
 pPL :: Parser A.ParamList
-pPL = A.ParamList <$> ((,) <$> idVar <* char ':' <*> pF) `sepBy` char ',' <*> (optionMaybe $ string "..." *> char ':' *> pF)
+pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepBy` semicolon <*> (optionMaybe $ keyword "..." *> symbol ':' *> pF)

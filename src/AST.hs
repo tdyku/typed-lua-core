@@ -3,16 +3,15 @@ module AST where
 import Types (S,F,V)
 
 data Stm = Skip                                        -- skip               
-         | StmBlock [Stm]                              -- s1 ; s2
          | StmAssign [LHVal] ExprList                  -- l+ = el
-         | StmWhile Expr Stm                           -- while e do s
-         | StmIf Expr Stm Stm                          -- if e then s1 else s2
-         | StmTypedVarDecl [IdType] ExprList Stm       -- local id:F+ = el in s
-         | StmVarDecl [Id] ExprList Stm                -- local id    = el in s
-         | StmRecDecl IdType Expr Stm                  -- rec:F       = e  in s
+         | StmWhile Expr [Stm]                           -- while e do s
+         | StmIf Expr [Stm] [Stm]                          -- if e then s1 else s2
+         | StmTypedVarDecl [IdType] ExprList [Stm]       -- local id:F+ = el in s
+         | StmVarDecl [Id] ExprList [Stm]                -- local id    = el in s
+         | StmRecDecl IdType Expr [Stm]                  -- rec:F       = e  in s
          | StmReturn ExprList                          -- return el
          | StmVoidAppl Appl                            -- |a|0
-         | StmMthdDecl Id Id ParamList S Stm -- ExprList  -- fun id1:id2 (pl):S s; return el
+         | StmMthdDecl Id Id ParamList S [Stm] -- TODO: ExprList  -- fun id1:id2 (pl):S s; return el
          deriving Show
 
 
@@ -23,9 +22,9 @@ data Expr = ExpNil                         -- nil
           | ExpFalse                       -- false
           | ExpTrue                        -- true
           | ExpVar Id                      -- id
-          | ExpTableAccess Expr Expr       -- e1[e2]
+          | ExpTableAccess Id Expr       -- e1[e2]
           | ExpTypeCoercion F Id           -- <F> id
-          | ExpFunDecl ParamList S Stm -- ExprList -- f
+          | ExpFunDecl ParamList S [Stm] -- TODO: add ExprList -- f
           | ExpTableConstructor [(Expr, Expr)] (Maybe MultResult) -- {[e1] = e2+} | {[e1] = e2+, me}
           | ExpABinOp AOp Expr Expr        -- e1 + e2, e1 .. e2, e1 == e2, e1 < e2           
           | ExpBBinOp BOp Expr Expr        -- e1 & e2, e1 and e2, e1 or e2
@@ -34,7 +33,7 @@ data Expr = ExpNil                         -- nil
           deriving Show
 
 data LHVal = IdVal Id                      -- id
-           | TableVal Expr Expr            -- e1[e2]
+           | TableVal Id Expr            -- e1[e2]
            | TypeCoercionVal Id Expr V     -- id[e]<V>
            deriving Show
 
