@@ -9,7 +9,7 @@ import           Text.Parsec.Prim                         (try, (<?>))
 import           Debug.Trace                              (trace)
 import           Text.Parsec.String                       (parseFromFile)
 
-import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar)
+import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon)
 import qualified AST               as A
 import qualified Types             as T
 
@@ -69,6 +69,6 @@ pFAny = keyword "any" *> pure T.FAny
 pFSelf = keyword "self" *> pure T.FSelf
 pFUnion =  T.FUnion <$> pFPrim <:> many1 (symbol '|' *> pFPrim)
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
-pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (many $ (,) <$> pF <* symbol ':' <*> pV) <*> pure T.Unique
+pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> pure T.Unique
 pFVariable = T.FVariable <$> idVar	
 pFRecursive = undefined
