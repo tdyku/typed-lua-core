@@ -12,6 +12,7 @@ library
                  , Types   
                  , Parser.Types
                  , Parser.Code
+                 , Parser.Utils
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base
