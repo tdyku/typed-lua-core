@@ -1,8 +1,8 @@
 module Parser.Types where
 
 import           Text.Parsec                              (Parsec)
-import           Text.Parsec.Char                         (letter, lower, alphaNum, string, digit, char, spaces, space)
-import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, sepBy1, chainl1)
+import           Text.Parsec.Char                         (alphaNum, digit, char, spaces)
+import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy)
 import           Text.ParserCombinators.Parsec            (Parser, many, many1) 
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parsec.Prim                         (try, (<?>))
@@ -14,12 +14,12 @@ import qualified AST               as A
 import qualified Types             as T
 
 
-parse :: IO T.F
-parse = parseFromFile pF "example" >>= either report return
-  where
-    report err = do
-        putStrLn $ "Error: " ++ show err
-        return T.FNil
+--parse :: IO T.F
+--parse = parseFromFile pF "example" >>= either report return
+--  where
+--    report err = do
+--        putStrLn $ "Error: " ++ show err
+--        return T.FNil
 
 
 ---- Types

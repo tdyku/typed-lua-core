@@ -23,4 +23,4 @@ comma = char ',' >> spaces
 spaces1 = space >> spaces
 
 idVar :: Parser String
-idVar = choice [letter, lower]  <:> (many alphaNum)
+idVar = choice [letter, lower]  <:> (many alphaNum) <* spaces
