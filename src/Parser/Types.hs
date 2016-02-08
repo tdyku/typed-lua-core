@@ -2,10 +2,10 @@ module Parser.Types where
 
 import           Text.Parsec                              (Parsec)
 import           Text.Parsec.Char                         (alphaNum, digit, char, spaces)
-import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy)
+import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, option)
 import           Text.ParserCombinators.Parsec            (Parser, many, many1) 
 import           Control.Applicative                      ((<*>), (*>), pure)
-import           Text.Parsec.Prim                         (try, (<?>))
+import           Text.Parsec.Prim                         (try, (<?>), (<|>))
 import           Debug.Trace                              (trace)
 import           Text.Parsec.String                       (parseFromFile)
 
@@ -69,6 +69,10 @@ pFAny = keyword "any" *> pure T.FAny
 pFSelf = keyword "self" *> pure T.FSelf
 pFUnion =  T.FUnion <$> pFPrim <:> many1 (symbol '|' *> pFPrim)
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
-pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> pure T.Unique
+pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique (pTableType)
 pFVariable = T.FVariable <$> idVar	
 pFRecursive = undefined
+pTableType = symbol '_' *> (keyword "unique" *> pure T.Unique
+                       <|> keyword "fixed" *> pure T.Fixed
+                       <|> keyword "closed" *> pure T.Closed
+                       <|> keyword "open" *> pure T.Open)

@@ -1,1 +1,8 @@
-skip;skip
+local person = {[e]=e} in
+person["firstname"] <string> = "Lou";
+person["lastname"] <string> = "Reed"
+;
+local a : {}_unique = {[e]=e} in
+local b : {}_open = a in
+a["x"] <string> = "foo";
+b["x"] <integer> = 1
