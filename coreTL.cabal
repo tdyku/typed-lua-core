@@ -12,10 +12,17 @@ library
                  , Types   
                  , Parser.Types
                  , Parser.Code
-                 , Parser.Utils
-  -- other-modules:       
-  -- other-extensions:    
+                 , Parser.Utils 
   build-depends:       base
                      , parsec
+                     , pretty-show
   hs-source-dirs:      src
   default-language:    Haskell2010
+
+executable coreTL
+  hs-source-dirs:   src
+  main-is:          Main.hs
+  build-depends:    base
+               ,    parsec
+               ,    pretty-show
+  default-language: Haskell2010

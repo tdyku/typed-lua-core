@@ -53,7 +53,7 @@ pS = choice [T.SP <$> pP, T.SUnion <$> pP `sepBy` symbol '|']  <?> "pS"
 
 -- P type
 pP :: Parser T.P
-pP = T.P <$> (between (symbol '(') (symbol ')') (pF `sepBy` comma)) <*> pure Nothing
+pP = T.P <$> between (symbol '(') (symbol ')') (pF `sepBy` comma) <*> pure Nothing
 
 -- F types
 pF, pFPrim, pFL, pFB, pFNil, pFValue, pFAny, pFSelf, pFUnion, pFFunction, pFTable, pFVariable, pFRecursive :: Parser T.F
@@ -69,7 +69,7 @@ pFAny = keyword "any" *> pure T.FAny
 pFSelf = keyword "self" *> pure T.FSelf
 pFUnion =  T.FUnion <$> pFPrim <:> many1 (symbol '|' *> pFPrim)
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
-pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique (pTableType)
+pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique pTableType
 pFVariable = T.FVariable <$> idVar	
 pFRecursive = undefined
 pTableType = symbol '_' *> (keyword "unique" *> pure T.Unique

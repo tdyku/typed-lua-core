@@ -1,24 +1,15 @@
 module Parser.Code where
 
-import           Text.Parsec.String                       (parseFromFile)
 import           Text.Parsec                              (Parsec)
 import           Text.Parsec.Char                         (letter, space, lower, alphaNum, string, digit, char, oneOf)
 import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, sepBy1)
-import           Text.ParserCombinators.Parsec            (Parser, many, many1, spaces, space, optionMaybe, eof, notFollowedBy, chainl1)
+import           Text.ParserCombinators.Parsec            (Parser, many, many1, spaces, space, optionMaybe, option, eof, notFollowedBy, chainl1)
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parsec.Prim                         (try, (<?>), (<|>))
 
 import qualified AST               as A
 import           Parser.Types      (pS, pF, pV)
 import           Parser.Utils      (idVar, (<:>), (<++>), keyword, semicolon, symbol, spaces1, comma)
-
-
-parse :: IO [A.Stm]
-parse = parseFromFile pManyStm "example" >>= either report return
-  where
-    report err = do
-        putStrLn $ "Error: " ++ show err
-        return []
 
 
 pManyStm :: Parser [A.Stm]
@@ -31,65 +22,65 @@ pSSkip = keyword "skip" *> pure A.Skip
 pSAssign = A.StmAssign <$> pLHVal `sepBy` comma <*>( symbol '=' *> pExprList)
 
 pSIf = do
-	keyword "if"
-	e <- pExpr
-	keyword "then"
-	stm1 <- pManyStm
-	keyword "else"
-	stm2 <- pManyStm
-	return $ A.StmIf e stm1 stm2
+    keyword "if"
+    e <- pExpr
+    keyword "then"
+    stm1 <- pManyStm
+    keyword "else"
+    stm2 <- pManyStm
+    return $ A.StmIf e stm1 stm2
 
 pSWhile = do
-	keyword "while"
-	e <- pExpr
-	keyword "do"
-	stm1 <- pManyStm
-	return $ A.StmWhile e stm1
+    keyword "while"
+    e <- pExpr
+    keyword "do"
+    stm1 <- pManyStm
+    return $ A.StmWhile e stm1
 
 pSTypedDecl = do
-	keyword "local"
-	typedVars <- ((,) <$> idVar <* symbol ':' <*> pF ) `sepBy` comma
-	symbol '='
-	exprList <- pExprList
-	keyword "in"
-	stm <- pManyStm
-	return $ A.StmTypedVarDecl typedVars exprList stm
+    keyword "local"
+    typedVars <- ((,) <$> idVar <* symbol ':' <*> pF ) `sepBy` comma
+    symbol '='
+    exprList <- pExprList
+    keyword "in"
+    stm <- pManyStm
+    return $ A.StmTypedVarDecl typedVars exprList stm
 
 pSDecl = do
-	keyword "local"
-	ids <- idVar `sepBy` comma
-	symbol '='
-	exprList <- pExprList
-	keyword "in"
-	stm <- pManyStm
-	return $ A.StmVarDecl ids exprList stm
+    keyword "local"
+    ids <- idVar `sepBy` comma
+    symbol '='
+    exprList <- pExprList
+    keyword "in"
+    stm <- pManyStm
+    return $ A.StmVarDecl ids exprList stm
 
 
 pSRecDecl = do
-	keyword "rec"
-	id <- idVar
-	symbol ':'
-	idType <- pF
-	symbol '='
-	expr <- pExpr
-	keyword "in"
-	stm <- pManyStm
-	return $ A.StmRecDecl (id, idType) expr stm
+    keyword "rec"
+    id <- idVar
+    symbol ':'
+    idType <- pF
+    symbol '='
+    expr <- pExpr
+    keyword "in"
+    stm <- pManyStm
+    return $ A.StmRecDecl (id, idType) expr stm
 
 pSReturn = keyword "return" *> (A.StmReturn <$> pExprList)
 
 pSVoidAppl = A.StmVoidAppl <$> between (symbol '|') (symbol '|') pA 
 
 pSMthDecl = do
-	keyword "fun"
-	id1 <- idVar
-	symbol ':'
-	id2 <- idVar
-	args <- between (char '(') (char ')') pPL
-	symbol ':'
-	retType <- pS
-	body <- pManyStm
-	return $ A.StmMthdDecl id1 id2 args retType body
+    keyword "fun"
+    id1 <- idVar
+    symbol ':'
+    id2 <- idVar
+    args <- between (char '(') (char ')') pPL
+    symbol ':'
+    retType <- pS
+    body <- pManyStm
+    return $ A.StmMthdDecl id1 id2 args retType body
 
 
 pExpr, pExpNil, pExpInt, pExpFloat, pExpString, pExpFalse, pExpTrue, pExpVar, pExpTableAccess, pExpTypeCoercion, pExpFunDecl, pExpTableConstructor, pExpABinOp, pExpUnary, pExpOneResult :: Parser A.Expr
@@ -106,20 +97,20 @@ pExpVar = A.ExpVar <$> idVar
 pExpTableAccess = A.ExpTableAccess <$> idVar <*> between (symbol '[') (symbol ']') pExpr
 pExpTypeCoercion = A.ExpTypeCoercion <$> between (symbol '<' ) (symbol '>') pF <*> idVar
 pExpFunDecl = do
-	keyword "fun"
-	args <- between (symbol '(') (symbol ')') pPL
-	symbol ':'
-	retType <- pS
-	body <- pManyStm
-	return $ A.ExpFunDecl args retType body
+    keyword "fun"
+    args <- between (symbol '(') (symbol ')') pPL
+    symbol ':'
+    retType <- pS
+    body <- pManyStm
+    return $ A.ExpFunDecl args retType body
 
 
 pExpTableConstructor = do
-	symbol '{'
-	exprs <- ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr) <:> many (try ( comma *> ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr)))
-	me <- optionMaybe (comma *> pME)
-	symbol '}'
-	return $ A.ExpTableConstructor exprs me
+    symbol '{'
+    exprs <- option [] $ ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr) <:> many (try ( comma *> ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr)))
+    me <- optionMaybe (comma *> pME)
+    symbol '}'
+    return $ A.ExpTableConstructor exprs me
 
 
 
@@ -160,4 +151,4 @@ pFunApp = A.FunAppl <$> pExpr <*> between (symbol '(') (symbol ')') pExprList
 pMthdApp = A.MthdAppl <$> pExpr <* symbol ':' <*> idVar <*> between (symbol '(') (symbol ')') pExprList
 
 pPL :: Parser A.ParamList
-pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepBy` comma <*> (optionMaybe $ keyword "..." *> symbol ':' *> pF)
+pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepBy` comma <*> optionMaybe (keyword "..." *> symbol ':' *> pF)
