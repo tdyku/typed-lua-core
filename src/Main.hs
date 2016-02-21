@@ -1,9 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 
-import           Text.Parsec.String  (parseFromFile)
-import           Parser.Code         (pManyStm)
-import           Text.Show.Pretty    (ppShow)
-import           System.Environment  (getArgs)
+import           Text.Trifecta.Parser (parseFromFile)
+import           Parser.Code          (pManyStm)
+import           Text.Show.Pretty     (ppShow)
+import           System.Environment   (getArgs)
 
 
 main :: IO ()
@@ -17,5 +17,5 @@ main = do
 parse :: String -> IO ()
 parse fpath = parseFromFile pManyStm fpath
           >>= putStrLn . \case 
-                Left err  -> ppShow err
-                Right res -> ppShow res
+                Nothing  -> ""
+                Just res -> ppShow res

@@ -1,13 +1,11 @@
 module Parser.Types where
 
-import           Text.Parsec                              (Parsec)
-import           Text.Parsec.Char                         (alphaNum, digit, char, spaces)
-import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, option)
-import           Text.ParserCombinators.Parsec            (Parser, many, many1) 
+import           Text.Parser.Char                         (alphaNum, digit, char, spaces)
+import           Text.Parser.Combinators                  (choice, between, sepBy, option, many)
+import           Text.Trifecta.Parser                     (Parser)
 import           Control.Applicative                      ((<*>), (*>), pure)
-import           Text.Parsec.Prim                         (try, (<?>), (<|>))
-import           Debug.Trace                              (trace)
-import           Text.Parsec.String                       (parseFromFile)
+import           Text.Parser.Combinators                  (try, (<?>))
+
 
 import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon)
 import qualified AST               as A
@@ -30,8 +28,8 @@ pLitType = choice [pFalseType, pTrueType, try pFloat, pInt, pString] <* spaces
 
 pFalseType = keyword "false" *> return T.LFalse
 pTrueType = keyword "true" *> return T.LTrue
-pInt = T.LInt <$> read <$> many1 digit
-pFloat = T.LFloat <$> read <$> many1 digit <++> (char '.' <:> many1 digit)
+pInt = T.LInt <$> read <$> digit <:> many digit
+pFloat = T.LFloat <$> read <$> (digit <:> many digit) <++> (char '.' <:> (digit <:> many digit))
 pString = char '\"' *> (T.LString <$> many alphaNum) <* symbol '\"'
 
 -- base types
@@ -67,12 +65,12 @@ pFNil = keyword "nil" *> pure T.FNil
 pFValue = keyword "value" *>  pure T.FValue
 pFAny = keyword "any" *> pure T.FAny
 pFSelf = keyword "self" *> pure T.FSelf
-pFUnion =  T.FUnion <$> pFPrim <:> many1 (symbol '|' *> pFPrim)
+pFUnion =  T.FUnion <$> pFPrim <:> ((symbol '|' *> pFPrim) <:> many (symbol '|' *> pFPrim))
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
 pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique pTableType
 pFVariable = T.FVariable <$> idVar	
 pFRecursive = undefined
-pTableType = symbol '_' *> (keyword "unique" *> pure T.Unique
-                       <|> keyword "fixed" *> pure T.Fixed
-                       <|> keyword "closed" *> pure T.Closed
-                       <|> keyword "open" *> pure T.Open)
+pTableType = symbol '_' *> choice [ keyword "unique" *> pure T.Unique
+                                  , keyword "fixed" *> pure T.Fixed
+                                  , keyword "closed" *> pure T.Closed
+                                  , keyword "open" *> pure T.Open]

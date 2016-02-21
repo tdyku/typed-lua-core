@@ -5,4 +5,4 @@ person["lastname"] <string> = "Reed"
 local a : {number:const number}_unique = {} in
 local b : {}_open = a in
 a["x"] <string> = "foo";
-b["x"] <integer> = 1
+b["x"] <integer> = blag

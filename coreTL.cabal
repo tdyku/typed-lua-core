@@ -14,7 +14,8 @@ library
                  , Parser.Code
                  , Parser.Utils 
   build-depends:       base
-                     , parsec
+                     , parsers
+                     , trifecta
                      , pretty-show
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -23,6 +24,7 @@ executable coreTL
   hs-source-dirs:   src
   main-is:          Main.hs
   build-depends:    base
-               ,    parsec
+               ,    trifecta
+               ,    parsers
                ,    pretty-show
   default-language: Haskell2010

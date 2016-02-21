@@ -1,11 +1,12 @@
 module Parser.Utils where
 
-import           Text.Parsec                              (Parsec)
-import           Text.Parsec.Char                         (letter, lower, alphaNum, string, digit, char, spaces, space)
-import           Text.ParserCombinators.Parsec.Combinator (choice, between, sepBy, sepBy1)
-import           Text.ParserCombinators.Parsec            (Parser, many, many1) 
+import           Text.Parser.Char                         (letter, lower, alphaNum, string, digit, char, spaces, space)
+import           Text.Parser.Combinators                  (option, choice, between, sepBy, sepBy1)
+import           Text.Parser.Combinators                  (many) 
+import           Control.Monad                            (liftM)
 import           Control.Applicative                      ((<*>), (*>), pure)
-import           Text.Parsec.Prim                         (try, (<?>))
+import           Text.Parser.Combinators                  (try, (<?>))
+import           Text.Trifecta.Parser                     (Parser)
 
 (<:>) a b = (:) <$> a <*> b
 (<++>) a b = (++) <$> a <*> b
@@ -24,3 +25,5 @@ spaces1 = space >> spaces
 
 idVar :: Parser String
 idVar = choice [letter, lower]  <:> many alphaNum <* spaces
+
+optionMaybe p = option Nothing (liftM Just p)
