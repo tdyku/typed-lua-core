@@ -27,3 +27,12 @@ idVar :: Parser String
 idVar = choice [letter, lower]  <:> many alphaNum <* spaces
 
 optionMaybe p = option Nothing (liftM Just p)
+
+many1 :: Parser a -> Parser [a]
+many1 p = p <:> many p
+
+--sepBy1 :: Parser a -> Parser sep -> Parser [a]
+--sepBy1 p sep = do{ x <- p
+--                 ; xs <- many (sep >> p)
+--                 ; return (x:xs)
+--                 }

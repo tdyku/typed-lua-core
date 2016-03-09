@@ -1,27 +1,17 @@
 module Parser.Types where
 
 import           Text.Parser.Char                         (alphaNum, digit, char, spaces)
-import           Text.Parser.Combinators                  (choice, between, sepBy, option, many)
+import           Text.Parser.Combinators                  (choice, between, sepBy, option, many, many)
 import           Text.Trifecta.Parser                     (Parser)
 import           Control.Applicative                      ((<*>), (*>), pure)
-import           Text.Parser.Combinators                  (try, (<?>))
+import           Text.Parser.Combinators                  (try, (<?>), sepBy1)
 
 
-import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon)
+import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon, many1)
 import qualified AST               as A
 import qualified Types             as T
 
-
---parse :: IO T.F
---parse = parseFromFile pF "example" >>= either report return
---  where
---    report err = do
---        putStrLn $ "Error: " ++ show err
---        return T.FNil
-
-
 ---- Types
-
 -- literal types
 pLitType, pFalseType, pTrueType, pInt, pFloat, pString :: Parser T.L
 pLitType = choice [pFalseType, pTrueType, try pFloat, pInt, pString] <* spaces
@@ -47,17 +37,15 @@ pV = choice [keyword "const" *> (T.VConst <$> pF), T.VF <$> pF]
 
 -- S types
 pS :: Parser T.S
-pS = choice [T.SP <$> pP, T.SUnion <$> pP `sepBy` symbol '|']  <?> "pS"
+pS = choice [try (T.SP <$> pP), T.SUnion <$> between (symbol '(') (symbol ')') (pP `sepBy1` symbol '|')] <?> "pS"
 
 -- P type
 pP :: Parser T.P
 pP = T.P <$> between (symbol '(') (symbol ')') (pF `sepBy` comma) <*> pure Nothing
 
 -- F types
-pF, pFPrim, pFL, pFB, pFNil, pFValue, pFAny, pFSelf, pFUnion, pFFunction, pFTable, pFVariable, pFRecursive :: Parser T.F
-
-pF = choice [try pFUnion, pFPrim]
-pFPrim = choice [pFL, pFB, pFValue, pFAny, pFSelf, pFNil, pFTable, pFFunction{- , pFVariable, pFRecursive-}]
+pF, pFL, pFB, pFNil, pFValue, pFAny, pFSelf, pFUnion, pFFunction, pFTable, pFVariable, pFRecursive :: Parser T.F
+pF = choice [pFL, pFB, pFValue, pFAny, pFSelf, pFNil, pFTable, try pFFunction, pFUnion{- , pFVariable, pFRecursive-}]
 
 pFL = T.FL <$> pLitType
 pFB = T.FB <$> pBaseType
@@ -65,7 +53,8 @@ pFNil = keyword "nil" *> pure T.FNil
 pFValue = keyword "value" *>  pure T.FValue
 pFAny = keyword "any" *> pure T.FAny
 pFSelf = keyword "self" *> pure T.FSelf
-pFUnion =  T.FUnion <$> pFPrim <:> ((symbol '|' *> pFPrim) <:> many (symbol '|' *> pFPrim))
+
+pFUnion =  between (symbol '(') (symbol ')') (T.FUnion <$> pF <:> many1 (symbol '|' *> pF))
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
 pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique pTableType
 pFVariable = T.FVariable <$> idVar	

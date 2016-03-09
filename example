@@ -1,8 +1,1 @@
-local person = {[e]=e}, ... in
-person["firstname"] <string> = "Lou";
-person["lastname"] <string> = "Reed"
-;
-local a : {number:const number}_unique = {} in
-local b : {}_open = a in
-a["x"] <string> = "foo";
-b["x"] <integer> = blag
+local a:number, b:(1) -> (2) = 2( in skip

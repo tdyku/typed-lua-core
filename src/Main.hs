@@ -2,6 +2,7 @@
 
 import           Text.Trifecta.Parser (parseFromFile)
 import           Parser.Code          (pManyStm)
+import           Parser.Types
 import           Text.Show.Pretty     (ppShow)
 import           System.Environment   (getArgs)
 

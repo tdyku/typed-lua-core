@@ -12,10 +12,11 @@ import           Parser.Types      (pS, pF, pV)
 import           Parser.Utils      (idVar, (<:>), (<++>), keyword, semicolon, symbol, spaces1, comma, optionMaybe,)
 
 
-pManyStm :: Parser [A.Stm]
-pManyStm = pStm `sepBy` semicolon <* eof 
+pManyStm :: Parser A.Block
+pManyStm = A.Block <$> pStm `sepBy` semicolon <* eof 
 
 pStm, pSSkip,  pSAssign, pSWhile, pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl :: Parser A.Stm
+
 pStm = choice [pSWhile, pSSkip, pSIf, try pSDecl, try pSTypedDecl, try pSAssign, try pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl] 
 pSSkip = keyword "skip" *> pure A.Skip
 
@@ -83,10 +84,24 @@ pSMthDecl = do
     return $ A.StmMthdDecl id1 id2 args retType body
 
 
-pExpr, pExpNil, pExpInt, pExpFloat, pExpString, pExpFalse, pExpTrue, pExpVar, pExpTableAccess, pExpTypeCoercion, pExpFunDecl, pExpTableConstructor, pExpABinOp, pExpUnary, pExpOneResult :: Parser A.Expr
+pExpr, pExpNil, pExpInt, pExpFloat       :: Parser A.Expr
+pExpString, pExpFalse, pExpTrue, pExpVar :: Parser A.Expr
+pExpTableAccess, pExpTypeCoercion        :: Parser A.Expr
+pExpFunDecl, pExpTableConstructor        :: Parser A.Expr
+pExpABinOp, pExpUnary, pExpOneResult     :: Parser A.Expr
 
-pSimpleExp = choice [try pExpNil, try pExpFloat, try pExpInt,  pExpString, try pExpFalse, try pExpTrue, try pExpTableAccess, try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor,  pExpUnary, pExpOneResult, pExpVar] <* spaces
-pExpr = choice [try pExpNil, try pExpABinOp, try pExpFloat, try pExpInt,  pExpString, try pExpFalse, try pExpTrue, try pExpTableAccess, try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor, pExpUnary, pExpOneResult, pExpVar] <* spaces
+terms = choice [try pExpNil, try pExpFloat, try pExpInt,  pExpString
+               , try pExpFalse, try pExpTrue, try pExpTableAccess
+               , try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor
+               ,  pExpUnary, pExpOneResult, pExpVar
+               ] <* spaces
+
+pExpr = choice [try pExpNil, try pExpABinOp, try pExpFloat, try pExpInt
+               ,  pExpString, try pExpFalse, try pExpTrue, try pExpTableAccess
+               , try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor
+               , pExpUnary, pExpOneResult, pExpVar
+               ] <* spaces
+
 pExpNil = keyword "nil" *> pure A.ExpNil
 pExpInt = A.ExpInt <$> read <$> (digit <:> many digit)
 pExpFloat = A.ExpFloat <$> read <$> (digit <:> many digit) <++> (char '.' <:> (digit <:> many digit))
@@ -96,6 +111,7 @@ pExpTrue = keyword "true" *> pure A.ExpTrue
 pExpVar = A.ExpVar <$> idVar
 pExpTableAccess = A.ExpTableAccess <$> idVar <*> between (symbol '[') (symbol ']') pExpr
 pExpTypeCoercion = A.ExpTypeCoercion <$> between (symbol '<' ) (symbol '>') pF <*> idVar
+
 pExpFunDecl = do
     keyword "fun"
     args <- between (symbol '(') (symbol ')') pPL
@@ -114,7 +130,7 @@ pExpTableConstructor = do
 
 
 
-pExpABinOp = pSimpleExp `chainl1` binOp
+pExpABinOp = terms `chainl1` binOp
     where binOp = choice [ A.ExpABinOp <$> choice [ symbol '+'  *> pure A.Add 
                                                   , keyword ".." *> pure A.Concat
                                                   , keyword "==" *> pure A.Equals
@@ -129,7 +145,7 @@ pExpABinOp = pSimpleExp `chainl1` binOp
 
 pExpUnary = A.ExpUnaryOp <$> choice [keyword "not" *> pure A.Not, keyword "#" *> pure A.Hash] <*> pExpr
 
-pExpOneResult = A.ExpOneResult <$> between (symbol '|') (symbol '|') pME
+pExpOneResult = A.ExpOneResult <$> between (symbol '|') (symbol '|') pA
 
 pLHVal, pLHId, pTableVal, pTypeCoercionVal :: Parser A.LHVal
 pLHVal = choice [try pTypeCoercionVal, try pTableVal, pLHId] <* spaces
@@ -138,12 +154,14 @@ pTableVal = A.TableVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr
 pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr <*> between (symbol '<') (symbol '>') pV
 
 
-pExprList :: Parser A.ExprList
-pExprList = A.ExprList <$> pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) <*> optionMaybe (comma *> pME)
+pExprList :: Parser [A.Expr]
+pExprList = do
+    exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
+    me <- option [] ((comma *> pME) <:> (return []))
+    return $ exprs ++ me
 
-
-pME :: Parser A.MultResult
-pME = choice [keyword "..." *> pure A.ResultVarArg, A.ResultAppl <$> pA]
+pME :: Parser A.Expr
+pME = choice [keyword "..." *> pure A.ExpVarArg, A.ExpOneResult <$> pA]
 
 
 pA, pFunApp, pMthdApp :: Parser A.Appl
