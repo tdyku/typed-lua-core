@@ -24,7 +24,7 @@ data Expr = ExpNil                         -- nil
           | ExpFalse                       -- false
           | ExpTrue                        -- true
           | ExpVar Id                      -- id
-          | ExpTableAccess Id Expr         -- TODO: e1[e2]
+          | ExpTableAccess Expr Expr         -- TODO: e1[e2]
           | ExpTypeCoercion F Id           -- <F> id
           | ExpFunDecl ParamList S Block   -- fund
           | ExpTableConstructor TableList (Maybe Expr) 

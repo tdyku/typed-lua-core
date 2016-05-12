@@ -1,8 +1,9 @@
+{-# LANGUAGE LambdaCase#-}
 module Parser.Code where
 
 import           Text.Parser.Char                         (letter, space, lower, alphaNum, string, digit, char, oneOf, spaces)
 import           Text.Parser.Combinators                  (choice, between, sepBy, sepBy1)
-import           Text.Parser.Combinators                  (many, option, eof, notFollowedBy, chainl1)
+import           Text.Parser.Combinators                  (some, many, option, eof, notFollowedBy, chainl1, chainr1)
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parser.Combinators                  (try, (<?>))
 import           Text.Trifecta.Parser                     (Parser)
@@ -96,6 +97,12 @@ terms = choice [try pExpNil, try pExpFloat, try pExpInt,  pExpString
                ,  pExpUnary, pExpOneResult, pExpVar
                ] <* spaces
 
+terms' = choice [try pExpNil, try pExpFloat, try pExpInt,  pExpString
+               , try pExpFalse, try pExpTrue 
+               , try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor
+               ,  pExpUnary, pExpOneResult, pExpVar
+               ] <* spaces
+
 pExpr = choice [try pExpNil, try pExpABinOp, try pExpFloat, try pExpInt
                ,  pExpString, try pExpFalse, try pExpTrue, try pExpTableAccess
                , try pExpTypeCoercion, pExpFunDecl, try pExpTableConstructor
@@ -109,7 +116,6 @@ pExpString = char '\"' *> (A.ExpString <$> many alphaNum) <* symbol '\"'
 pExpFalse = keyword "false" *> pure A.ExpFalse
 pExpTrue = keyword "true" *> pure A.ExpTrue
 pExpVar = A.ExpVar <$> idVar
-pExpTableAccess = A.ExpTableAccess <$> idVar <*> between (symbol '[') (symbol ']') pExpr
 pExpTypeCoercion = A.ExpTypeCoercion <$> between (symbol '<' ) (symbol '>') pF <*> idVar
 
 pExpFunDecl = do
@@ -141,6 +147,13 @@ pExpABinOp = terms `chainl1` binOp
                                                   , keyword "or" *> pure A.Or
                                                   ]
                          ]
+
+pExpTableAccess = do
+    prefix <- terms'
+    postfix <- some (between (symbol '[') (symbol ']') pExpr)
+    return $ mFold (prefix : postfix)
+  where mFold (a : []) = a
+        mFold (p:ps) = (A.ExpTableAccess p (mFold ps) )
 
 
 pExpUnary = A.ExpUnaryOp <$> choice [keyword "not" *> pure A.Not, keyword "#" *> pure A.Hash] <*> pExpr
