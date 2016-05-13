@@ -14,6 +14,8 @@ library
                  , Parser.Code
                  , Parser.Utils 
                  , Typechecker.Type
+                 , Typechecker.Utils
+                 , Typechecker.Subtype
   build-depends:       base
                      , parsers
                      , trifecta

@@ -1,2 +1,2 @@
-local a : number, b : integer = 1,2 in
-    a,b = 1,2
+local a:integer, b:number = 1,2 in
+    a,b = 1,2+3.1
