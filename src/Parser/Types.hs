@@ -57,7 +57,7 @@ pFSelf = keyword "self" *> pure T.FSelf
 pFUnion =  between (symbol '(') (symbol ')') (T.FUnion <$> pF <:> many1 (symbol '|' *> pF))
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
 pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique pTableType
-pFVariable = T.FVariable <$> idVar	
+pFVariable = T.FVariable <$> idVar
 pFRecursive = undefined
 pTableType = symbol '_' *> choice [ keyword "unique" *> pure T.Unique
                                   , keyword "fixed" *> pure T.Fixed

@@ -3,7 +3,7 @@ module Parser.Code where
 
 import           Text.Parser.Char                         (letter, space, lower, alphaNum, string, digit, char, oneOf, spaces)
 import           Text.Parser.Combinators                  (choice, between, sepBy, sepBy1)
-import           Text.Parser.Combinators                  (some, many, option, eof, notFollowedBy, chainl1, chainr1)
+import           Text.Parser.Combinators                  (some, many, option, optional, eof, notFollowedBy, chainl1, chainr1)
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parser.Combinators                  (try, (<?>))
 import           Text.Trifecta.Parser                     (Parser)
@@ -130,7 +130,7 @@ pExpFunDecl = do
 pExpTableConstructor = do
     symbol '{'
     exprs <- option [] $ ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr) <:> many (try ( comma *> ((,) <$> between (symbol '[') (symbol ']') pExpr <* symbol '=' <*> pExpr)))
-    me <- optionMaybe (comma *> pME)
+    me <- optionMaybe (comma *> pA)
     symbol '}'
     return $ A.ExpTableConstructor exprs me
 
@@ -167,20 +167,19 @@ pTableVal = A.TableVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr
 pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (symbol '[') (symbol ']') pExpr <*> between (symbol '<') (symbol '>') pV
 
 
-pExprList :: Parser [A.Expr]
+pExprList :: Parser A.ExprList
 pExprList = do
     exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
-    me <- option [] ((comma *> pME) <:> (return []))
-    return $ exprs ++ me
+    me <- optional (comma *> pA)
+    return $ A.ExprList exprs me
 
-pME :: Parser A.Expr
-pME = choice [keyword "..." *> pure A.ExpVarArg, A.ExpOneResult <$> pA]
 
 
 pA, pFunApp, pMthdApp :: Parser A.Appl
-pA = choice [pFunApp, pMthdApp]
+pA = choice [pFunApp, pMthdApp, pVarArg]
 pFunApp = A.FunAppl <$> pExpr <*> between (symbol '(') (symbol ')') pExprList
 pMthdApp = A.MthdAppl <$> pExpr <* symbol ':' <*> idVar <*> between (symbol '(') (symbol ')') pExprList
+pVarArg = keyword "..." *> pure A.VarArg
 
 pPL :: Parser A.ParamList
 pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepBy` comma <*> optionMaybe (keyword "..." *> symbol ':' *> pF)

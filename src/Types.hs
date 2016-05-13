@@ -12,31 +12,31 @@ data F = FL L                   --literal
        | FTable TypedList TType --table
        | FVariable String       --TODO: variable type
        | FRecursive String F    --TODO: recursive type
-       deriving Show
+       deriving (Show, Eq)
 
 
 -- literal types
-data L = LFalse | LTrue | LInt Int | LFloat Float | LString String deriving Show
+data L = LFalse | LTrue | LInt Int | LFloat Float | LString String deriving (Show, Eq)
 
 
 -- basic types
-data B = BBoolean | BInt | BNumber | BString deriving Show
+data B = BBoolean | BInt | BNumber | BString deriving (Show, Eq)
 
 
 -- value type
 data V = VF F
        | VConst F
-       deriving Show
+       deriving (Show, Eq)
 
 
 -- snd level type
 data S = SP P       -- tuple types
        | SUnion [P] -- union of tuples
-       deriving Show
+       deriving (Show, Eq)
 
 data P = P [F] (Maybe F) -- tuple type - list over F types possibly ending with variadic type
-       deriving Show
+       deriving (Show, Eq)
 
 
-data TType = Unique | Open | Fixed | Closed deriving Show
+data TType = Unique | Open | Fixed | Closed deriving (Show, Eq)
 type TypedList = [(F,V)]
