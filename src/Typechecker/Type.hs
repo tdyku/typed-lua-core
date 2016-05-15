@@ -24,7 +24,7 @@ tBlock (Block bs) = mapM_ tStmt bs
 tStmt :: Stm -> TypeState ()
 tStmt Skip = tSkip Skip
 tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
---tStmt a@(StmAssign _ _) = tAssignment a
+tStmt a@(StmAssign _ _) = tAssignment a
 
 
 -- T-LOCAL1
@@ -44,21 +44,15 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
             mapM_ tStmt blck 
     where insertFun gmap (k,v) = insert k (TF v) gmap        
 
----- T-LOCAL2
-----tLocal2 :: Stat -> TypeState ()
-----tLocal2 (LocalAssign vars exps (Block blck)) = do
-----    let P texps (Just e) = tExpList exps
 
 getAppType :: Appl -> TypeState S
 getAppType = error "getAppType"
-getTypeId :: LHVal -> TypeState F
-getTypeId = error "getTypeId"
 
----- T-LHSLIST
---tLHSList :: [LHVal] -> TypeState S
---tLHSList vars = do
---    fs <- mapM getTypeId vars
---    return . SP $ P fs (Just FValue)
+-- T-LHSLIST
+tLHSList :: [LHVal] -> TypeState S
+tLHSList vars = do
+    fs <- mapM getTypeId vars
+    return . SP $ P fs (Just FValue)
 
  --T-EXPLIST 1, 1, 1
 tExpList :: ExprList -> TypeState E
@@ -92,30 +86,15 @@ ps2Projections tExps ps = do
 tSkip :: Stm -> TypeState ()
 tSkip _ = return ()
 
-
---tExpList23 :: ExprList -> TypeState T
---tExpList23 (ExprList exps (Just app)) = 
-
-
--- T-APPLY
---tApply :: FunAppl -> TypeState S
---tApply (FunAppl exp expList) = do
---    TF funType <- lookupGamma exp
-
-
-
-
 -- T-ASSIGNMENT1
---tAssignment :: Stm -> TypeState ()
---tAssignment (StmAssign vars exps) = do
---    P texps (Just e) <- tExpList1 exps
---    P tvars (Just v) <- tLHSList vars
---    let varTypeTuple = tupleZip texps e tvars v
---    let typingResult = fmap (\(x,y) -> x <? y) varTypeTuple 
---    tlog $ "Assignment: " ++ (show typingResult)
---    case all id typingResult of
---        True -> return ()
---        False -> throwError "False in tAssignment"
+tAssignment :: Stm -> TypeState ()
+tAssignment (StmAssign vars exps) = do
+    texps <- tExpList exps
+    s1 <- e2s texps
+    s2 <- tLHSList vars
+    if s1 <? s2
+    then tlog $ "Assignment: " ++ show s1 ++ " " ++ show s2
+    else throwError "False in tAssignment"
 
 
 getTypeExp :: Expr -> TypeState T
@@ -140,19 +119,18 @@ getTypeExp = \case
 
 
 
---getTypeId :: LHVal -> TypeState F
---getTypeId (IdVal id) = do
---    env <- get
---    case env ^. gamma ^.at id of
---        Just (TF f) -> return f
---        Nothing -> throwError $ "Cannot find variable" ++ id
+getTypeId :: LHVal -> TypeState F
+getTypeId (IdVal id) = do
+    env <- get
+    case env ^. gamma ^.at id of
+        Just (TF f) -> return f
+        Nothing -> throwError $ "Cannot find variable" ++ id
 
 --tupleZip ls l rs r | length ls == length rs = zip ls rs
 --                   | length ls < length rs = zip (ls ++ repeat l) rs
 --                   | otherwise = zip ls (rs ++ repeat r)
 
 
--- TODO: components should have type F
 tArith :: Expr -> TypeState F
 tArith (ExpABinOp Add e1 e2) = do
     TF f1 <- getTypeExp e1
