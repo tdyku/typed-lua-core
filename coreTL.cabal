@@ -16,6 +16,7 @@ library
                  , Typechecker.Type
                  , Typechecker.Utils
                  , Typechecker.Subtype
+                 , Typechecker.AuxFuns
   build-depends:       base
                      , parsers
                      , trifecta

@@ -42,6 +42,12 @@ insertSToPi i s = do
     let newPI = insert i s (env ^. pi)
     put $ Env (env ^. gamma) newPI (env ^. counter)
 
+insertToGamma :: String -> T -> TypeState ()
+insertToGamma id tp = do
+    env <- get
+    let newGamma = insert id tp (env ^. gamma)
+    put $ Env newGamma (env ^. pi) (env ^. counter)
+
 
 tlog :: (Show a) => a -> TypeState ()
 tlog = liftIO . putStrLn . show

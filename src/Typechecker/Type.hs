@@ -8,12 +8,13 @@ import Data.Map                 (Map, lookup, insert, empty)
 import Control.Monad.Except     (throwError)
 import Control.Lens
 import Control.Monad.State      (put, get)
+import Data.List                (transpose)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Data.List (transpose)
+import Typechecker.AuxFuns (infer)
 
 
     
@@ -24,6 +25,7 @@ tBlock (Block bs) = mapM_ tStmt bs
 tStmt :: Stm -> TypeState ()
 tStmt Skip = tSkip Skip
 tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
+tStmt t@(StmVarDecl _ _ _) = tLocal2 t
 tStmt a@(StmAssign _ _) = tAssignment a
 
 
@@ -44,6 +46,14 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
             mapM_ tStmt blck 
     where insertFun gmap (k,v) = insert k (TF v) gmap        
 
+
+tLocal2 :: Stm -> TypeState ()
+tLocal2 (StmVarDecl ids exprList (Block blck)) = do
+    etype <- tExpList exprList
+    mapM_ (registerVar etype) (zip ids [0..])
+    mapM_ tStmt blck
+    where registerVar :: E -> (String, Int) -> TypeState ()
+          registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
 getAppType :: Appl -> TypeState S
 getAppType = error "getAppType"
@@ -125,10 +135,6 @@ getTypeId (IdVal id) = do
     case env ^. gamma ^.at id of
         Just (TF f) -> return f
         Nothing -> throwError $ "Cannot find variable" ++ id
-
---tupleZip ls l rs r | length ls == length rs = zip ls rs
---                   | length ls < length rs = zip (ls ++ repeat l) rs
---                   | otherwise = zip ls (rs ++ repeat r)
 
 
 tArith :: Expr -> TypeState F

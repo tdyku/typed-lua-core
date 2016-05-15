@@ -1,2 +1,2 @@
-local a:integer, b:number = 1,2+1 in
-    a,b = 1
+local a, b = 1,1 in
+    skip
