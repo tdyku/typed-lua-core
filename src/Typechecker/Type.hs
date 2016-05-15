@@ -128,15 +128,15 @@ getTypeExp = \case
     ExpString s                -> return . TF . FL $ LString s
     ExpTypeCoercion f _        -> return . TF $ f
     ExpVar var                 -> lookupGamma var 
-    --e@(ExpABinOp Add _ _)      -> TF <$> tArith e
-    --e@(ExpABinOp Concat _ _)   -> TF <$> tConcat e
-    --e@(ExpABinOp Equals _ _)   -> TF <$> tEqual e
-    --e@(ExpABinOp LessThan _ _) -> TF <$> tOrder e
-    --e@(ExpBBinOp Amp _ _)      -> TF <$> tBitWise e
-    --e@(ExpBBinOp And _ _)      -> TF <$> tAnd e
-    --e@(ExpBBinOp Or _ _)       -> TF <$> tOr e
-    --e@(ExpUnaryOp Not _)       -> TF <$> tNot e
-    --e@(ExpUnaryOp Hash _)      -> TF <$> tLen e    
+    e@(ExpABinOp Add _ _)      -> TF <$> tArith e
+    e@(ExpABinOp Concat _ _)   -> TF <$> tConcat e
+    e@(ExpABinOp Equals _ _)   -> TF <$> tEqual e
+    e@(ExpABinOp LessThan _ _) -> TF <$> tOrder e
+    e@(ExpBBinOp Amp _ _)      -> TF <$> tBitWise e
+    e@(ExpBBinOp And _ _)      -> TF <$> tAnd e
+    e@(ExpBBinOp Or _ _)       -> TF <$> tOr e
+    e@(ExpUnaryOp Not _)       -> TF <$> tNot e
+    e@(ExpUnaryOp Hash _)      -> TF <$> tLen e    
 
 
 
@@ -152,94 +152,94 @@ getTypeExp = \case
 --                   | otherwise = zip ls (rs ++ repeat r)
 
 
----- TODO: components should have type F
---tArith :: Expr -> TypeState F
---tArith (ExpABinOp Add e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2
---    if f1 <? (FB BInt) && f2 <? (FB BInt)
---    then return (FB BInt)
---    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
---         then return (FB BNumber)
---         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
---              then return (FB BNumber)
---              else if f1 == FAny || f2 == FAny 
---              then return FAny
---              else throwError "tArith cannot typecheck"
+-- TODO: components should have type F
+tArith :: Expr -> TypeState F
+tArith (ExpABinOp Add e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2
+    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    then return (FB BInt)
+    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+         then return (FB BNumber)
+         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+              then return (FB BNumber)
+              else if f1 == FAny || f2 == FAny 
+              then return FAny
+              else throwError "tArith cannot typecheck"
 
 
 
---tConcat :: Expr -> TypeState F
---tConcat (ExpABinOp Concat e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2
---    if f1 <? (FB BString) && f2 <? (FB BString)
---    then return (FB BString)
---    else if f1 == FAny && f2 == FAny
---         then return FAny
---         else throwError "tConcat cannot typecheck"
+tConcat :: Expr -> TypeState F
+tConcat (ExpABinOp Concat e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2
+    if f1 <? (FB BString) && f2 <? (FB BString)
+    then return (FB BString)
+    else if f1 == FAny && f2 == FAny
+         then return FAny
+         else throwError "tConcat cannot typecheck"
 
---tEqual :: Expr -> TypeState F
---tEqual (ExpABinOp Equals e1 e2) = return (FB BBoolean)
+tEqual :: Expr -> TypeState F
+tEqual (ExpABinOp Equals e1 e2) = return (FB BBoolean)
 
---tOrder :: Expr -> TypeState F
---tOrder (ExpABinOp LessThan e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2
---    if f1 <? (FB BNumber) && f2 <? (FB BNumber) 
---    then return (FB BBoolean)
---    else if f1 <? (FB BString) && f2 <? (FB BString)
---         then return (FB BString)
---         else if f1 == FAny || f2 == FAny
---              then return FAny
---              else throwError "tOrder cannot typecheck"
-
-
---tBitWise :: Expr -> TypeState F
---tBitWise (ExpBBinOp Amp e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2
---    if f1 <? (FB BInt) && f2 <? (FB BInt)
---    then return (FB BInt)
---    else if f1 == FAny || f2 == FAny
---         then return FAny
---         else throwError "tBitWise cannot typecheck"
+tOrder :: Expr -> TypeState F
+tOrder (ExpABinOp LessThan e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2
+    if f1 <? (FB BNumber) && f2 <? (FB BNumber) 
+    then return (FB BBoolean)
+    else if f1 <? (FB BString) && f2 <? (FB BString)
+         then return (FB BString)
+         else if f1 == FAny || f2 == FAny
+              then return FAny
+              else throwError "tOrder cannot typecheck"
 
 
---tAnd :: Expr -> TypeState F
---tAnd (ExpBBinOp And e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2
---    if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
---    then return f1
---    else if not (FNil <? f1) && not ((FL LFalse) <? f1)
---         then return f2
---         else return $ FUnion [f1, f2]
+tBitWise :: Expr -> TypeState F
+tBitWise (ExpBBinOp Amp e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2
+    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    then return (FB BInt)
+    else if f1 == FAny || f2 == FAny
+         then return FAny
+         else throwError "tBitWise cannot typecheck"
 
---tOr :: Expr -> TypeState F
---tOr (ExpBBinOp Or e1 e2) = do
---    f1 <- getTypeExp e1
---    f2 <- getTypeExp e2  
---    if not (FNil <? f1) && not ((FL LFalse)  <? f2)
---    then return f1
---    else if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
---         then return f2
---         else throwError "tOr unimplemented tOr5"
 
---tNot :: Expr -> TypeState F
---tNot (ExpUnaryOp Not e1) = do
---    f <- getTypeExp e1
---    if f == FNil || f == (FL LFalse) || f == FUnion [FNil, FL LFalse]
---    then return $ FL LTrue
---    else if not (FNil <? f) && not ((FL LFalse) <? f)
---         then return $ FL LFalse
---         else return $ FB BBoolean
+tAnd :: Expr -> TypeState F
+tAnd (ExpBBinOp And e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2
+    if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
+    then return f1
+    else if not (FNil <? f1) && not ((FL LFalse) <? f1)
+         then return f2
+         else return $ FUnion [f1, f2]
 
---tLen :: Expr -> TypeState F
---tLen (ExpUnaryOp Hash e1) = do
---    f <- getTypeExp e1
---    if f <? (FB BString) || f <? (FTable [] Closed)
---    then return $ FB BInt
---    else if f == FAny
---         then return FAny 
---         else throwError "tLen cannot typecheck"
+tOr :: Expr -> TypeState F
+tOr (ExpBBinOp Or e1 e2) = do
+    TF f1 <- getTypeExp e1
+    TF f2 <- getTypeExp e2  
+    if not (FNil <? f1) && not ((FL LFalse)  <? f2)
+    then return f1
+    else if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
+         then return f2
+         else throwError "tOr unimplemented tOr5"
+
+tNot :: Expr -> TypeState F
+tNot (ExpUnaryOp Not e1) = do
+    TF f <- getTypeExp e1
+    if f == FNil || f == (FL LFalse) || f == FUnion [FNil, FL LFalse]
+    then return $ FL LTrue
+    else if not (FNil <? f) && not ((FL LFalse) <? f)
+         then return $ FL LFalse
+         else return $ FB BBoolean
+
+tLen :: Expr -> TypeState F
+tLen (ExpUnaryOp Hash e1) = do
+    TF f <- getTypeExp e1
+    if f <? (FB BString) || f <? (FTable [] Closed)
+    then return $ FB BInt
+    else if f == FAny
+         then return FAny 
+         else throwError "tLen cannot typecheck"
