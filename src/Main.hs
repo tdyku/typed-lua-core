@@ -22,8 +22,8 @@ compile fpath = parseFromFile pManyStm fpath
           >>= \case 
               Nothing  -> return ()
               Just res -> do
-              	tres <- runTypechecker res tBlock
-              	case tres of
-              		Right () -> putStrLn "correct!"
-              		Left err -> putStrLn err
+                tres <- runTypechecker res tBlock
+                case tres of
+                  Right () -> putStrLn "correct!"
+                  Left err -> putStrLn err
 

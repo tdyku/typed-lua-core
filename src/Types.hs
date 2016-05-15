@@ -40,3 +40,16 @@ data P = P [F] (Maybe F) -- tuple type - list over F types possibly ending with 
 
 data TType = Unique | Open | Fixed | Closed deriving (Show, Eq)
 type TypedList = [(F,V)]
+
+
+
+type X = Int
+type I = Int
+-- Expression Types
+data T = TF F
+       | TFilter F F
+       | TProj X I
+       deriving (Show, Eq)
+
+
+data E = E [T] (Maybe T)
