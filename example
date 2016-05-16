@@ -1,2 +1,1 @@
-local a:integer,b:integer = 1,2 in
-    if a then a = 1 else a = 1.0
+if |type(id)| == "string" then a = 1 else a = 1.0

@@ -39,6 +39,15 @@ lookupGamma var = do
                                 Nothing -> lookfor var ms
         lookfor var [] = throwError $  "Cannot find " ++ var ++ " in gamma."
 
+lookupPI :: Int -> TypeState S
+lookupPI x = do
+    env <- get 
+    lookfor x (env ^. pi)
+    where lookfor :: Int -> [(Map Int S)] -> TypeState S
+          lookfor x (m:ms) = case lookup x m of
+                                  Just tp -> return tp
+                                  Nothing -> lookfor x ms
+          lookfor x [] = throwError $  "Cannot find " ++ show x ++ " in pi." 
 
 insertSToPi :: Int -> S -> TypeState ()
 insertSToPi i s = do

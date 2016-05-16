@@ -14,7 +14,7 @@ import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..),
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot)
+import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt)
 
 
     
@@ -94,33 +94,97 @@ ps2Projections tExps ps = do
 
 
 tIF :: Stm -> TypeState ()
-tIF (StmIf (ExpVar id) tBlk eBlk) = do
-  idType <- lookupGamma id
-  case idType of
-    TF f -> do 
-      let ft = fot f FNil
-          fe = fit f FNil
-      if ft /= RVoid
-      then do newGammaScope
-              insertToGamma id (TFilter f (specialResult ft))
-              tBlock tBlk
-              popGammaScope
-      else return ()
-      if fe /= RVoid
-      then do newGammaScope
-              insertToGamma id (TFilter f (specialResult fe))
-              tBlock eBlk
-              popGammaScope
-      else return ()
+tIF (StmIf cond tBlk eBlk) =
+  case cond of 
+    ExpVar id -> do
+      idType <- lookupGamma id
+      case idType of
+        TF f -> do 
+          let ft = fot f FNil
+              fe = fit f FNil
+          if ft /= RVoid
+          then do newGammaScope
+                  insertToGamma id (TFilter f (specialResult ft))
+                  tBlock tBlk
+                  popGammaScope
+          else return ()
+          if fe /= RVoid
+          then do newGammaScope
+                  insertToGamma id (TFilter f (specialResult fe))
+                  tBlock eBlk
+                  popGammaScope
+          else return ()
+                  
+        TProj x i -> do
+          sX <- lookupPI x
+          if (fit (proj sX i) FNil) == RVoid
+          then (do
+            newPiScope
+            let sT = fopt sX FNil i
+            insertSToPi x sT
+            tBlock tBlk 
+            popPiScope)
+          else if (fot (proj sX i) FNil) == RVoid
+               then (do
+                newPiScope
+                let sE = fipt sX FNil i
+                insertSToPi x sE
+                tBlock eBlk
+                popPiScope)
+               else (do
+                let sT = fopt sX FNil i
+                    sE = fipt sX FNil i
+                newPiScope
+                insertSToPi x sT
+                tBlock tBlk
+                popPiScope
+                insertSToPi x sE
+                tBlock eBlk
+                popPiScope)
+        _ -> normalCase cond tBlk eBlk
+    ExpABinOp Equals (ExpOneResult (FunAppl (ExpVar "type") (ExprList [ExpVar "id"] Nothing))) (ExpString "string") -> do
+      idType <- lookupGamma "id"
+      case idType of
+        TFilter f1 f2 -> do
+          let rT = fit f2 (FB BString)
+              rE = fot f2 (FB BString)
+          if rT == RVoid
+          then (do
+            newGammaScope
+            let (RF fE) = rE
+            insertToGamma "id" (TFilter f1 fE)
+            tBlock eBlk
+            popGammaScope
+            )
+          else if rE == RVoid
+               then (do
+                newGammaScope
+                let (RF fT) = rT
+                insertToGamma "id" (TFilter f1 fT)
+                tBlock tBlk
+                popGammaScope
+                )
+               else (do
+                let (RF fT) = rT
+                let (RF fE) = rE
+                newGammaScope
+                insertToGamma "id" (TFilter f1 fT)
+                tBlock tBlk
+                popGammaScope
+                newGammaScope
+                insertToGamma "id" (TFilter f1 fE)
+                tBlock eBlk
+                popGammaScope
+                )
+        _ -> normalCase cond tBlk eBlk     
 
-    TFilter f1 f2 -> undefined
-    TProj x i -> undefined
+    _ -> normalCase cond tBlk eBlk
+  where normalCase cond (Block tBlk) (Block eBlk) = do
+          getTypeExp cond
+          mapM_ tStmt tBlk
+          mapM_ tStmt eBlk              
 
 
-tIF (StmIf cond (Block tBlk) (Block eBlk)) = do
-    getTypeExp cond
-    mapM_ tStmt tBlk
-    mapM_ tStmt eBlk
 
 
 -- T-SKIP
