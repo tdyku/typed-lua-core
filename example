@@ -1,2 +1,2 @@
-local a, b = 1,1 in
-    skip
+local a,b = 1,2 in
+ if a then skip else a = 1

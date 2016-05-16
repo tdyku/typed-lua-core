@@ -27,7 +27,7 @@ tStmt Skip = tSkip Skip
 tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
 tStmt t@(StmVarDecl _ _ _) = tLocal2 t
 tStmt a@(StmAssign _ _) = tAssignment a
-
+tStmt i@(StmIf _ _ _) = tIF i
 
 -- T-LOCAL1
 tLocal1 :: Stm -> TypeState ()
@@ -39,10 +39,7 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     case expListS <? fvarsS of
         False -> throwError $ "tLocal1 error" 
         True  -> do
-            env <- get
-            let gammaMap = env ^. gamma
-                newMap = foldl insertFun gammaMap fvars
-            put $ env & gamma .~ newMap
+            mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
             mapM_ tStmt blck 
     where insertFun gmap (k,v) = insert k (TF v) gmap        
 
@@ -90,6 +87,16 @@ ps2Projections tExps ps = do
   where unwrap (P fs _) = fs
 
 
+--tIF :: Stm -> TypeState ()
+--tIF (StmIf (ExpVar id) tBlk eBlk) = do
+
+
+
+
+tIF (StmIf cond (Block tBlk) (Block eBlk)) = do
+    getTypeExp cond
+    mapM_ tStmt tBlk
+    mapM_ tStmt eBlk
 
 
 -- T-SKIP
@@ -131,10 +138,10 @@ getTypeExp = \case
 
 getTypeId :: LHVal -> TypeState F
 getTypeId (IdVal id) = do
-    env <- get
-    case env ^. gamma ^.at id of
-        Just (TF f) -> return f
-        Nothing -> throwError $ "Cannot find variable" ++ id
+    (lookupGamma id) >>= \case
+          (TF f) -> return f
+
+
 
 
 tArith :: Expr -> TypeState F
