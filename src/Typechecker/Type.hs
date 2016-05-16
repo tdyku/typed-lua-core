@@ -11,7 +11,7 @@ import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult)
-import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), Appl(..), BOp(..), UnOp(..))
+import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
 import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt)
@@ -29,6 +29,7 @@ tStmt t@(StmVarDecl _ _ _)      = tLocal2 t
 tStmt a@(StmAssign _ _)         = tAssignment a
 tStmt i@(StmIf _ _ _)           = tIF i
 tStmt w@(StmWhile _ _)          = tWhile w
+tStmt r@(StmReturn _)           = tReturn r
 
 -- T-LOCAL1
 tLocal1 :: Stm -> TypeState ()
@@ -53,8 +54,18 @@ tLocal2 (StmVarDecl ids exprList (Block blck)) = do
     where registerVar :: E -> (String, Int) -> TypeState ()
           registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
-getAppType :: Appl -> TypeState S
-getAppType = error "getAppType"
+tApply :: Appl -> TypeState S
+tApply (FunAppl e eList) = do
+    funType <- getTypeExp e
+    tArgs <- tExpList eList
+    case funType of
+      TF (FFunction s1 s2) -> do
+        let e1 = sp2e s1
+        if tArgs <? e1 
+        then return s2
+        else throwError "Given args does not match function."
+      _ -> throwError "Expression is not a function in tApply."
+
 
 -- T-LHSLIST
 tLHSList :: [LHVal] -> TypeState S
@@ -72,7 +83,7 @@ tLHSList vars = do
 tExpList :: ExprList -> TypeState E
 tExpList (ExprList exps Nothing) = E <$> (mapM getTypeExp exps) <*> (pure . Just . TF $ FNil)
 tExpList (ExprList exps (Just me)) = do
-    appType <- getAppType me
+    appType <- tApply me
     tExps <- mapM getTypeExp exps
     case appType of
         SP (P fs mf) -> E <$> merge tExps fs <*> mF2mT mf
@@ -88,7 +99,7 @@ ps2Projections tExps ps = do
     insertSToPi x (SUnion ps)
     let unwrapped = fmap unwrap ps
         maxLen = maximum $ fmap length unwrapped
-        projections = fmap (TProj x) [1..maxLen]
+        projections = fmap (TProj x) [0..maxLen-1]
     E <$> return (tExps ++ projections) <*> (pure . Just . TF $ FNil)
 
   where unwrap (P fs _) = fs
@@ -185,8 +196,10 @@ tIF (StmIf cond tBlk eBlk) =
           mapM_ tStmt tBlk
           mapM_ tStmt eBlk              
 
+tReturn :: Stm -> TypeState ()
+tReturn (StmReturn explist) = return () -- we typecheck returns in function body 
 
-tWhile :: Expr -> TypeState ()
+tWhile :: Stm -> TypeState ()
 tWhile (StmWhile e blk) = do
   getTypeExp e
   tBlock blk
@@ -204,7 +217,7 @@ tAssignment (StmAssign vars exps) = do
     s2 <- tLHSList vars
     if s1 <? s2
     then tlog $ "Assignment: " ++ show s1 ++ " " ++ show s2
-    else throwError "False in tAssignment"
+    else throwError $ "False in tAssignment" ++ show s1 ++ show s2
 
 
 getTypeExp :: Expr -> TypeState T
@@ -226,8 +239,22 @@ getTypeExp = \case
     e@(ExpBBinOp Or _ _)       -> TF <$> tOr e
     e@(ExpUnaryOp Not _)       -> TF <$> tNot e
     e@(ExpUnaryOp Hash _)      -> TF <$> tLen e    
+    f@(ExpFunDecl _ _ _)       -> TF <$> tFun f
 
-
+tFun :: Expr -> TypeState F
+tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
+    let argType = SP $ P (fmap snd tIds) mf
+    newScopes
+    tBlock blk
+    tRetExp <- controlRet $ last b
+    sRet <- e2s tRetExp
+    tlog sRet
+    if sRet <? s 
+    then return $ FFunction argType s
+    else throwError "Function type inconsistent with return type"
+  where controlRet :: Stm -> TypeState E
+        controlRet (StmReturn expList) = tExpList expList
+        controlRet _ = throwError "Last stm in function should RETURN el"
 
 
 

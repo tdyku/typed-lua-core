@@ -168,10 +168,12 @@ pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (symbol '[') (symbol 
 
 
 pExprList :: Parser A.ExprList
-pExprList = do
-    exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
-    me <- optional (comma *> pA)
-    return $ A.ExprList exprs me
+pExprList = choice [try singleMe, fullExprList]
+    where singleMe = (A.ExprList []) <$> optional pA
+          fullExprList = do
+            exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
+            me <- optional (comma *> pA)
+            return $ A.ExprList exprs me
 
 
 

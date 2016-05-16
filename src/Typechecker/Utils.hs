@@ -5,7 +5,7 @@ module Typechecker.Utils where
 import Control.Monad.State      (State, StateT, liftIO, get, put, evalStateT)
 import Control.Monad.Except     (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Types                    (F, T(..), P(..), S(..), E(..))
+import Types                    (F(..), T(..), P(..), S(..), E(..))
 import Data.Map
 import Data.Map                 (lookup)
 import Prelude                   hiding (pi, lookup)
@@ -111,5 +111,20 @@ e2s (E ts mb) = do
             return (SP $ P fs mbF)
     where unwrap :: T -> TypeState F
           unwrap (TF f) = return f
-          unwrap _      = throwError "Cannot convert projection type to first level type."
+          unwrap (TFilter _ f) = return f
+          unwrap (TProj x i) = do
+            piProj <- lookupPI x
+            return $ case piProj of
+                SP p@(P fs mf) -> unwrapP i p
+                SUnion ps -> FUnion $ fmap (unwrapP i) ps
+          
+          unwrapP i (P fs mf) = if i < length fs 
+                                then fs !! i
+                                else case mf of
+                                       Nothing -> FNil
+                                       Just f1 -> f1
 
+
+
+sp2e :: S -> E
+sp2e (SP (P fs mf)) = E (fmap TF fs) (fmap TF mf)
