@@ -53,3 +53,11 @@ data T = TF F
 
 
 data E = E [T] (Maybe T)
+
+data R = RF F
+       | RVoid
+       deriving (Show, Eq)
+
+
+specialResult :: R -> F
+specialResult (RF f) = f

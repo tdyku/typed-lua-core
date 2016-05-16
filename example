@@ -1,2 +1,2 @@
-local a,b = 1,2 in
- if a then skip else a = 1
+local a:integer,b:integer = 1,2 in
+    if a then a = 1 else a = 1.0

@@ -22,6 +22,7 @@ compile fpath = parseFromFile pManyStm fpath
           >>= \case 
               Nothing  -> return ()
               Just res -> do
+                putStrLn . ppShow $ res
                 tres <- runTypechecker res tBlock
                 case tres of
                   Right () -> putStrLn "correct!"

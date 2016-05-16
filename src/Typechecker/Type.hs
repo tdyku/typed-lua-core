@@ -10,11 +10,11 @@ import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 
-import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..))
+import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult)
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer)
+import Typechecker.AuxFuns (infer, fit, fot)
 
 
     
@@ -25,9 +25,9 @@ tBlock (Block bs) = mapM_ tStmt bs
 tStmt :: Stm -> TypeState ()
 tStmt Skip = tSkip Skip
 tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
-tStmt t@(StmVarDecl _ _ _) = tLocal2 t
-tStmt a@(StmAssign _ _) = tAssignment a
-tStmt i@(StmIf _ _ _) = tIF i
+tStmt t@(StmVarDecl _ _ _)      = tLocal2 t
+tStmt a@(StmAssign _ _)         = tAssignment a
+tStmt i@(StmIf _ _ _)           = tIF i
 
 -- T-LOCAL1
 tLocal1 :: Stm -> TypeState ()
@@ -58,8 +58,14 @@ getAppType = error "getAppType"
 -- T-LHSLIST
 tLHSList :: [LHVal] -> TypeState S
 tLHSList vars = do
-    fs <- mapM getTypeId vars
+    fs <- mapM getSimpleTypeVar vars
     return . SP $ P fs (Just FValue)
+    where getSimpleTypeVar :: LHVal -> TypeState F
+          getSimpleTypeVar (IdVal id) = do
+            (lookupGamma id) >>= \case
+                  (TF f) -> return f
+                  (TFilter _ f1) -> return f1
+
 
  --T-EXPLIST 1, 1, 1
 tExpList :: ExprList -> TypeState E
@@ -87,10 +93,28 @@ ps2Projections tExps ps = do
   where unwrap (P fs _) = fs
 
 
---tIF :: Stm -> TypeState ()
---tIF (StmIf (ExpVar id) tBlk eBlk) = do
+tIF :: Stm -> TypeState ()
+tIF (StmIf (ExpVar id) tBlk eBlk) = do
+  idType <- lookupGamma id
+  case idType of
+    TF f -> do 
+      let ft = fot f FNil
+          fe = fit f FNil
+      if ft /= RVoid
+      then do newGammaScope
+              insertToGamma id (TFilter f (specialResult ft))
+              tBlock tBlk
+              popGammaScope
+      else return ()
+      if fe /= RVoid
+      then do newGammaScope
+              insertToGamma id (TFilter f (specialResult fe))
+              tBlock eBlk
+              popGammaScope
+      else return ()
 
-
+    TFilter f1 f2 -> undefined
+    TProj x i -> undefined
 
 
 tIF (StmIf cond (Block tBlk) (Block eBlk)) = do
@@ -109,6 +133,8 @@ tAssignment (StmAssign vars exps) = do
     texps <- tExpList exps
     s1 <- e2s texps
     s2 <- tLHSList vars
+    tlog s1
+    tlog s2
     if s1 <? s2
     then tlog $ "Assignment: " ++ show s1 ++ " " ++ show s2
     else throwError "False in tAssignment"
@@ -134,12 +160,6 @@ getTypeExp = \case
     e@(ExpUnaryOp Not _)       -> TF <$> tNot e
     e@(ExpUnaryOp Hash _)      -> TF <$> tLen e    
 
-
-
-getTypeId :: LHVal -> TypeState F
-getTypeId (IdVal id) = do
-    (lookupGamma id) >>= \case
-          (TF f) -> return f
 
 
 

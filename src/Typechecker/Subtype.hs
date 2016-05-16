@@ -2,7 +2,7 @@ module Typechecker.Subtype where
 
 import Data.Maybe (isNothing, fromJust)
 
-import Types (F(..), L(..), B(..), P(..), S(..))
+import Types (F(..), L(..), B(..), P(..), S(..), T(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
 
 allT = all (\x -> x == True)
@@ -41,3 +41,9 @@ instance Subtype P where
 tupleZip ls l rs r | length ls == length rs = zip ls rs
                    | length ls < length rs = zip (ls ++ repeat (if isNothing l then FNil else fromJust l)) rs
                    | otherwise = zip ls (rs ++ repeat (if isNothing r then FNil else fromJust r))
+
+
+instance Subtype T where
+    TF f1         <? TF f2         = f1 <? f2
+    TFilter x1 y1 <? TFilter x2 y2 = (x1 == x2) && (y1 == y2)
+    TProj x1 i1   <? TProj x2 i2   = (x1 == x2) && (i1 == i2 )
