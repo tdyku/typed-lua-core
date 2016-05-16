@@ -28,6 +28,7 @@ tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
 tStmt t@(StmVarDecl _ _ _)      = tLocal2 t
 tStmt a@(StmAssign _ _)         = tAssignment a
 tStmt i@(StmIf _ _ _)           = tIF i
+tStmt w@(StmWhile _ _)          = tWhile w
 
 -- T-LOCAL1
 tLocal1 :: Stm -> TypeState ()
@@ -185,6 +186,10 @@ tIF (StmIf cond tBlk eBlk) =
           mapM_ tStmt eBlk              
 
 
+tWhile :: Expr -> TypeState ()
+tWhile (StmWhile e blk) = do
+  getTypeExp e
+  tBlock blk
 
 
 -- T-SKIP
@@ -197,8 +202,6 @@ tAssignment (StmAssign vars exps) = do
     texps <- tExpList exps
     s1 <- e2s texps
     s2 <- tLHSList vars
-    tlog s1
-    tlog s2
     if s1 <? s2
     then tlog $ "Assignment: " ++ show s1 ++ " " ++ show s2
     else throwError "False in tAssignment"

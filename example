@@ -1,1 +1,2 @@
-if |type(id)| == "string" then a = 1 else a = 1.0
+local id:string = "blah" in
+	skip
