@@ -53,6 +53,6 @@ data ParamList = ParamList [(Id, F)] (Maybe F) deriving Show  -- id:F+ | id:F+, 
 type IdType = (Id, F)
 type TableList = [(Expr, Expr)]
 type Id = String
-data AOp = Add | Concat | Equals | LessThan deriving Show
+data AOp = Add | Concat | Equals | LessThan | Div | Mod deriving Show
 data BOp = Amp | And | Or deriving Show
 data UnOp = Hash | Not deriving Show

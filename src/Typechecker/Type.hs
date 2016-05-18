@@ -239,6 +239,8 @@ getTypeExp = \case
     ExpTypeCoercion f _        -> return . TF $ f
     ExpVar var                 -> lookupGamma var 
     e@(ExpABinOp Add _ _)      -> TF <$> tArith e
+    e@(ExpABinOp Div _ _)      -> TF <$> tDiv e
+    e@(ExpABinOp Mod _ _)      -> TF <$> tMod e    
     e@(ExpABinOp Concat _ _)   -> TF <$> tConcat e
     e@(ExpABinOp Equals _ _)   -> TF <$> tEqual e
     e@(ExpABinOp LessThan _ _) -> TF <$> tOrder e
@@ -246,23 +248,48 @@ getTypeExp = \case
     e@(ExpBBinOp And _ _)      -> TF <$> tAnd e
     e@(ExpBBinOp Or _ _)       -> TF <$> tOr e
     e@(ExpUnaryOp Not _)       -> TF <$> tNot e
-    e@(ExpUnaryOp Hash _)      -> TF <$> tLen e    
+    e@(ExpUnaryOp Hash _)      -> TF <$> tLen e
     f@(ExpFunDecl _ _ _)       -> TF <$> tFun f
 
 tFun :: Expr -> TypeState F
 tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
-    let argType = SP $ P (fmap snd tIds) mf
     newScopes
+    let argType = SP $ P (fmap snd tIds) mf
+    mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
     tBlock blk
-    tRetExp <- controlRet $ last b
-    sRet <- e2s tRetExp
-    tlog sRet
-    if sRet <? s 
-    then return $ FFunction argType s
-    else throwError "Function type inconsistent with return type"
-  where controlRet :: Stm -> TypeState E
-        controlRet (StmReturn expList) = tExpList expList
-        controlRet _ = throwError "Last stm in function should RETURN el"
+
+    popScopes
+    return $ FFunction argType s
+
+
+tDiv :: Expr -> TypeState F
+tDiv (ExpABinOp Div e1 e2) = do
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
+    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    then return (FB BInt)
+    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+         then return (FB BNumber)
+         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+              then return (FB BNumber)
+              else if f1 == FAny || f2 == FAny 
+              then return FAny
+              else throwError "tDiv cannot typecheck"
+
+
+tMod :: Expr -> TypeState F
+tMod (ExpABinOp Mod e1 e2) = do
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
+    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    then return (FB BInt)
+    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+         then return (FB BNumber)
+         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+              then return (FB BNumber)
+              else if f1 == FAny || f2 == FAny 
+              then return FAny
+              else throwError "tMod cannot typecheck"
 
 
 
