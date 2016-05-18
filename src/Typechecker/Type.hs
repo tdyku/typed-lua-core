@@ -105,6 +105,14 @@ ps2Projections tExps ps = do
   where unwrap (P fs _) = fs
 
 
+readExp :: T -> TypeState T
+readExp (TF f) = return $ TF f
+readExp (TFilter _ f2) = return $ TF f2
+readExp (TProj x1 i1) = do
+  sX <- lookupPI x1
+  return . TF $ proj sX i1
+
+
 tIF :: Stm -> TypeState ()
 tIF (StmIf cond tBlk eBlk) =
   case cond of 
@@ -260,8 +268,8 @@ tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
 
 tArith :: Expr -> TypeState F
 tArith (ExpABinOp Add e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if f1 <? (FB BInt) && f2 <? (FB BInt)
     then return (FB BInt)
     else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
@@ -276,8 +284,8 @@ tArith (ExpABinOp Add e1 e2) = do
 
 tConcat :: Expr -> TypeState F
 tConcat (ExpABinOp Concat e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if f1 <? (FB BString) && f2 <? (FB BString)
     then return (FB BString)
     else if f1 == FAny && f2 == FAny
@@ -289,8 +297,8 @@ tEqual (ExpABinOp Equals e1 e2) = return (FB BBoolean)
 
 tOrder :: Expr -> TypeState F
 tOrder (ExpABinOp LessThan e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if f1 <? (FB BNumber) && f2 <? (FB BNumber) 
     then return (FB BBoolean)
     else if f1 <? (FB BString) && f2 <? (FB BString)
@@ -302,8 +310,8 @@ tOrder (ExpABinOp LessThan e1 e2) = do
 
 tBitWise :: Expr -> TypeState F
 tBitWise (ExpBBinOp Amp e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if f1 <? (FB BInt) && f2 <? (FB BInt)
     then return (FB BInt)
     else if f1 == FAny || f2 == FAny
@@ -313,8 +321,8 @@ tBitWise (ExpBBinOp Amp e1 e2) = do
 
 tAnd :: Expr -> TypeState F
 tAnd (ExpBBinOp And e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
     then return f1
     else if not (FNil <? f1) && not ((FL LFalse) <? f1)
@@ -323,8 +331,8 @@ tAnd (ExpBBinOp And e1 e2) = do
 
 tOr :: Expr -> TypeState F
 tOr (ExpBBinOp Or e1 e2) = do
-    TF f1 <- getTypeExp e1
-    TF f2 <- getTypeExp e2  
+    TF f1 <- (getTypeExp e1 >>= readExp)
+    TF f2 <- (getTypeExp e2 >>= readExp)
     if not (FNil <? f1) && not ((FL LFalse)  <? f2)
     then return f1
     else if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
@@ -333,7 +341,7 @@ tOr (ExpBBinOp Or e1 e2) = do
 
 tNot :: Expr -> TypeState F
 tNot (ExpUnaryOp Not e1) = do
-    TF f <- getTypeExp e1
+    TF f <- (getTypeExp e1 >>= readExp)
     if f == FNil || f == (FL LFalse) || f == FUnion [FNil, FL LFalse]
     then return $ FL LTrue
     else if not (FNil <? f) && not ((FL LFalse) <? f)
@@ -342,7 +350,7 @@ tNot (ExpUnaryOp Not e1) = do
 
 tLen :: Expr -> TypeState F
 tLen (ExpUnaryOp Hash e1) = do
-    TF f <- getTypeExp e1
+    TF f <- (getTypeExp e1 >>= readExp)
     if f <? (FB BString) || f <? (FTable [] Closed)
     then return $ FB BInt
     else if f == FAny

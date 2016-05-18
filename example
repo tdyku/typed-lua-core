@@ -1,4 +1,4 @@
-local s,d,f = "s",1,fun (x:integer):((nil,string)|(integer, integer)) skip; return nil,"a" in
-	local b,c = f(1) in
-	    if b then d = c else s = c
-	
+local someStr,someInt,idiv = "",1 in
+    local idiv = fun (x:integer):((nil,string)|(integer, integer)) return nil,"a" in
+        local p,q = idiv(1) in
+            if p then someInt = q + 2 else someStr = q .. "a"
