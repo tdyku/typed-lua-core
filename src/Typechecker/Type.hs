@@ -64,6 +64,8 @@ tApply (FunAppl e eList) = do
         if tArgs <? e1 
         then return s2
         else throwError "Given args does not match function."
+
+      TF FAny -> return . SP . (P []) . Just $ FAny  
       _ -> throwError "Expression is not a function in tApply."
 
 
