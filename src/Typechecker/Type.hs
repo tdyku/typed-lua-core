@@ -243,6 +243,7 @@ getTypeExp = \case
     e@(ExpABinOp Mod _ _)      -> TF <$> tMod e    
     e@(ExpABinOp Concat _ _)   -> TF <$> tConcat e
     e@(ExpABinOp Equals _ _)   -> TF <$> tEqual e
+    e@(ExpABinOp IntDiv _ _)   -> TF <$> tIntDiv e
     e@(ExpABinOp LessThan _ _) -> TF <$> tOrder e
     e@(ExpBBinOp Amp _ _)      -> TF <$> tBitWise e
     e@(ExpBBinOp And _ _)      -> TF <$> tAnd e
@@ -275,6 +276,21 @@ tDiv (ExpABinOp Div e1 e2) = do
               else if f1 == FAny || f2 == FAny 
               then return FAny
               else throwError "tDiv cannot typecheck"
+
+
+tIntDiv :: Expr -> TypeState F
+tIntDiv (ExpABinOp IntDiv e1 e2) = do
+      TF f1 <- (getTypeExp e1 >>= readExp)
+      TF f2 <- (getTypeExp e2 >>= readExp)
+      if f1 <? (FB BInt) && f2 <? (FB BInt)
+      then return (FB BInt)
+      else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+           then return (FB BInt)
+           else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+                then return (FB BInt)
+                else if f1 == FAny || f2 == FAny 
+                then return FAny
+                else throwError "tIntDiv cannot typecheck"
 
 
 tMod :: Expr -> TypeState F

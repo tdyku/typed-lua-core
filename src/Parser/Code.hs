@@ -141,6 +141,7 @@ pExpABinOp = terms `chainl1` binOp
                                                   , keyword ".." *> pure A.Concat
                                                   , keyword "==" *> pure A.Equals
                                                   , symbol '<' *> pure A.LessThan
+                                                  , try $ keyword "//" *> pure A.IntDiv
                                                   , symbol '/' *> pure A.Div
                                                   , symbol '%' *> pure A.Mod
                                                   ]
