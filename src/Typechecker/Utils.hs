@@ -7,14 +7,13 @@ import Control.Monad.Except     (ExceptT, throwError, runExceptT)
 import Control.Lens
 import Types                    (F(..), T(..), P(..), S(..), E(..))
 import Data.Map
-import Data.Map                 (lookup)
 import Prelude                   hiding (pi, lookup)
-
+import Data.Maybe               (fromMaybe, isNothing)
 type Name = String
 
 data Env = Env {
-    _gamma   :: [(Map Name T)],
-    _pi      :: [(Map Int  S)],
+    _gamma   :: [Map Name T],
+    _pi      :: [Map Int  S],
     _counter :: Int
 }
 makeLenses ''Env
@@ -33,7 +32,7 @@ lookupGamma :: String -> TypeState T
 lookupGamma var = do
     env <- get 
     lookfor var (env ^. gamma)
-  where lookfor :: String -> [(Map Name T)] -> TypeState T
+  where lookfor :: String -> [Map Name T] -> TypeState T
         lookfor var (m:ms) = case lookup var m of
                                 Just tp -> return tp
                                 Nothing -> lookfor var ms
@@ -43,7 +42,7 @@ lookupPI :: Int -> TypeState S
 lookupPI x = do
     env <- get 
     lookfor x (env ^. pi)
-    where lookfor :: Int -> [(Map Int S)] -> TypeState S
+    where lookfor :: Int -> [Map Int S] -> TypeState S
           lookfor x (m:ms) = case lookup x m of
                                   Just tp -> return tp
                                   Nothing -> lookfor x ms
@@ -53,14 +52,14 @@ insertSToPi :: Int -> S -> TypeState ()
 insertSToPi i s = do
     env <- get
     let (piMap:piMaps) = env ^. pi
-        newPI = insert i s (piMap)
+        newPI = insert i s piMap
     put $ Env (env ^. gamma) (newPI:piMaps) (env ^. counter)
 
 insertToGamma :: String -> T -> TypeState ()
 insertToGamma id tp = do
     env <- get
     let (gMap:gMaps) = env ^. gamma
-        newGamma = insert id tp (gMap)
+        newGamma = insert id tp gMap
     put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter)
 
 newGammaScope :: TypeState ()
@@ -100,12 +99,12 @@ popScopes = do
 
 
 tlog :: (Show a) => a -> TypeState ()
-tlog = liftIO . putStrLn . show
+tlog = liftIO . print
 
 e2s :: E -> TypeState S
 e2s (E ts mb) = do
     fs <- mapM unwrap ts
-    if mb == Nothing 
+    if isNothing mb
     then return (SP $ P fs Nothing)
     else do mbF <- mapM unwrap mb
             return (SP $ P fs mbF)
@@ -120,10 +119,7 @@ e2s (E ts mb) = do
           
           unwrapP i (P fs mf) = if i < length fs 
                                 then fs !! i
-                                else case mf of
-                                       Nothing -> FNil
-                                       Just f1 -> f1
-
+                                else fromMaybe FNil mf
 
 
 sp2e :: S -> E

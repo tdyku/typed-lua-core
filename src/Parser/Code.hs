@@ -155,8 +155,8 @@ pExpTableAccess = do
     prefix <- terms'
     postfix <- some (between (symbol '[') (symbol ']') pExpr)
     return $ mFold (prefix : postfix)
-  where mFold (a : []) = a
-        mFold (p:ps) = (A.ExpTableAccess p (mFold ps) )
+  where mFold [a] = a
+        mFold (p:ps) = A.ExpTableAccess p (mFold ps)
 
 
 pExpUnary = A.ExpUnaryOp <$> choice [keyword "not" *> pure A.Not, keyword "#" *> pure A.Hash] <*> pExpr
@@ -172,7 +172,7 @@ pTypeCoercionVal = A.TypeCoercionVal <$> idVar <*> between (symbol '[') (symbol 
 
 pExprList :: Parser A.ExprList
 pExprList = choice [try singleMe, fullExprList]
-    where singleMe = (A.ExprList []) <$> optional pA
+    where singleMe = A.ExprList [] <$> optional pA
           fullExprList = do
             exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
             me <- optional (comma *> pA)

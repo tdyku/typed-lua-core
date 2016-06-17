@@ -282,9 +282,9 @@ tDiv (ExpABinOp Div e1 e2) = do
 
 tIntDiv :: Expr -> TypeState F
 tIntDiv (ExpABinOp IntDiv e1 e2) = do
-      TF f1 <- (getTypeExp e1 >>= readExp)
-      TF f2 <- (getTypeExp e2 >>= readExp)
-      if f1 <? (FB BInt) && f2 <? (FB BInt)
+      TF f1 <- getTypeExp e1 >>= readExp
+      TF f2 <- getTypeExp e2 >>= readExp
+      if f1 <? FB BInt && f2 <? FB BInt
       then return (FB BInt)
       else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
            then return (FB BInt)
@@ -297,13 +297,13 @@ tIntDiv (ExpABinOp IntDiv e1 e2) = do
 
 tMod :: Expr -> TypeState F
 tMod (ExpABinOp Mod e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
-    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber)
          then return (FB BNumber)
-         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+         else if f1 <? FB BNumber && f2 <? FB BNumber
               then return (FB BNumber)
               else if f1 == FAny || f2 == FAny 
               then return FAny
@@ -313,13 +313,13 @@ tMod (ExpABinOp Mod e1 e2) = do
 
 tArith :: Expr -> TypeState F
 tArith (ExpABinOp Add e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
-    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber)
          then return (FB BNumber)
-         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
+         else if f1 <? FB BNumber && f2 <? FB BNumber
               then return (FB BNumber)
               else if f1 == FAny || f2 == FAny 
               then return FAny
@@ -329,9 +329,9 @@ tArith (ExpABinOp Add e1 e2) = do
 
 tConcat :: Expr -> TypeState F
 tConcat (ExpABinOp Concat e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 <? (FB BString) && f2 <? (FB BString)
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 <? FB BString && f2 <? FB BString
     then return (FB BString)
     else if f1 == FAny && f2 == FAny
          then return FAny
@@ -342,11 +342,11 @@ tEqual (ExpABinOp Equals e1 e2) = return (FB BBoolean)
 
 tOrder :: Expr -> TypeState F
 tOrder (ExpABinOp LessThan e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 <? (FB BNumber) && f2 <? (FB BNumber) 
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 <? FB BNumber && f2 <? FB BNumber
     then return (FB BBoolean)
-    else if f1 <? (FB BString) && f2 <? (FB BString)
+    else if f1 <? FB BString && f2 <? FB BString
          then return (FB BString)
          else if f1 == FAny || f2 == FAny
               then return FAny
@@ -355,9 +355,9 @@ tOrder (ExpABinOp LessThan e1 e2) = do
 
 tBitWise :: Expr -> TypeState F
 tBitWise (ExpBBinOp Amp e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
     else if f1 == FAny || f2 == FAny
          then return FAny
@@ -366,37 +366,37 @@ tBitWise (ExpBBinOp Amp e1 e2) = do
 
 tAnd :: Expr -> TypeState F
 tAnd (ExpBBinOp And e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if f1 == FNil || f1 == FL LFalse || f1 == FUnion [FNil, FL LFalse]
     then return f1
-    else if not (FNil <? f1) && not ((FL LFalse) <? f1)
+    else if not (FNil <? f1) && not (FL LFalse <? f1)
          then return f2
          else return $ FUnion [f1, f2]
 
 tOr :: Expr -> TypeState F
 tOr (ExpBBinOp Or e1 e2) = do
-    TF f1 <- (getTypeExp e1 >>= readExp)
-    TF f2 <- (getTypeExp e2 >>= readExp)
-    if not (FNil <? f1) && not ((FL LFalse)  <? f2)
+    TF f1 <- getTypeExp e1 >>= readExp
+    TF f2 <- getTypeExp e2 >>= readExp
+    if not (FNil <? f1) && not (FL LFalse  <? f2)
     then return f1
-    else if f1 == FNil || f1 == (FL LFalse) || f1 == FUnion [FNil, FL LFalse]
+    else if f1 == FNil || f1 == FL LFalse || f1 == FUnion [FNil, FL LFalse]
          then return f2
          else throwError "tOr unimplemented tOr5"
 
 tNot :: Expr -> TypeState F
 tNot (ExpUnaryOp Not e1) = do
-    TF f <- (getTypeExp e1 >>= readExp)
-    if f == FNil || f == (FL LFalse) || f == FUnion [FNil, FL LFalse]
+    TF f <- getTypeExp e1 >>= readExp
+    if f == FNil || f == FL LFalse || f == FUnion [FNil, FL LFalse]
     then return $ FL LTrue
-    else if not (FNil <? f) && not ((FL LFalse) <? f)
+    else if not (FNil <? f) && not (FL LFalse <? f)
          then return $ FL LFalse
          else return $ FB BBoolean
 
 tLen :: Expr -> TypeState F
 tLen (ExpUnaryOp Hash e1) = do
-    TF f <- (getTypeExp e1 >>= readExp)
-    if f <? (FB BString) || f <? (FTable [] Closed)
+    TF f <- getTypeExp e1 >>= readExp
+    if f <? FB BString || f <? FTable [] Closed
     then return $ FB BInt
     else if f == FAny
          then return FAny 

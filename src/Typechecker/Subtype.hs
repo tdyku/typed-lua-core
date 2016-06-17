@@ -2,14 +2,21 @@ module Typechecker.Subtype where
 
 import Data.Maybe (isNothing, fromJust)
 
-import Types (F(..), L(..), B(..), P(..), S(..), T(..), E(..))
-import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
+import Types      (F(..), L(..), B(..), P(..), S(..), T(..), E(..), V(..))
+import AST        (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
 
-allT = all (\x -> x == True)
-anyT = any (\x -> x == True)
+
+allT = all (== True)
+anyT = any (== True)
+
 
 class Subtype a where 
   (<?) :: a -> a -> Bool
+
+
+-- Do we need it?
+--class CSubtype a where    -- depth subtyping of table fields - <c
+--  (<!) :: a -> a -> Bool
 
 
 instance Subtype F where
@@ -23,19 +30,24 @@ instance Subtype F where
     _                <?  FValue       = True
     _                <?  FAny         = True
     FAny             <?  _            = True
-    FUnion fs        <? x             = if allT $ fmap (\f -> f <? x) fs then True else False
-    x                <? FUnion fs     = if anyT $ fmap (\f -> x <? f) fs then True else False
-    x                <? y             = if x == y then True else False
+    FUnion fs        <? x             = allT $ fmap (<? x) fs
+    x                <? FUnion fs     = anyT $ fmap (x <?) fs
+    x                <? y             = x == y
 
+
+instance Subtype V where
+    VF f1 <? VF f2 = f1 <? f2 && f2 <? f1
+    VConst f1 <? VConst f2 = f1 <? f2
+    VF f1 <? VConst f2 = f1 <? f2
 
 instance Subtype S where
-    SUnion ss <? SP p      = if allT $ fmap (\s -> s <? p) ss then True else False
-    SP p      <? SUnion ss = if anyT $ fmap (\s -> p <? s) ss then True else False
+    SUnion ss <? SP p      = allT $ fmap (<? p) ss
+    SP p      <? SUnion ss = anyT $ fmap (p <?) ss
     SP p1     <? SP p2     = p1 <? p2
 
 
 instance Subtype P where 
-    P fs1 mf1 <? P fs2 mf2 = if allT $ fmap (\(a,b) -> a <? b) (tupleZip fs1 mf1 fs2 mf2) then True else False
+    P fs1 mf1 <? P fs2 mf2 = allT $ fmap (uncurry (<?)) (tupleZip fs1 mf1 fs2 mf2)
 
 
 tupleZip ls l rs r | length ls == length rs = zip ls rs
@@ -50,9 +62,10 @@ instance Subtype T where
 
 
 instance Subtype E where
-    E ts1 mt1 <? E ts2 mt2 = if allT $ fmap (\(a,b) -> a <? b) (tupleZipE ts1 mt1 ts2 mt2) then True else False
+    E ts1 mt1 <? E ts2 mt2 = allT $ fmap (uncurry (<?)) (tupleZipE ts1 mt1 ts2 mt2)
 
 
 tupleZipE ls l rs r | length ls == length rs = zip ls rs
                    | length ls < length rs = zip (ls ++ repeat (if isNothing l then (TF FNil) else fromJust l)) rs
                    | otherwise = zip ls (rs ++ repeat (if isNothing r then (TF FNil) else fromJust r))
+
