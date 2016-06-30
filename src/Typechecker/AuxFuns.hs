@@ -30,7 +30,7 @@ unwrapV (VConst f) = f
 tag :: TType -> F -> Bool
 tag t2 (FTable _ t1)  = t1 == t2
 tag t (FUnion fs) = anyT $ fmap (tag t) fs
-
+tag _ _ = False
 
 infer :: E -> Int -> T
 infer (E ts ms) i 

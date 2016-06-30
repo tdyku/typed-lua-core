@@ -10,11 +10,11 @@ import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 
-import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult)
+import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt)
+import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf)
 
 
     
@@ -39,7 +39,7 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     let tvars = fmap snd fvars
         fvarsS = SP $ P tvars (Just FValue)
     case expListS <? fvarsS of
-        False -> throwError $ "tLocal1 error" 
+        False -> throwError $ "tLocal1 error:\n" ++ show expListS ++ "\n" ++ show fvars 
         True  -> do
             mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
             mapM_ tStmt blck 
@@ -232,27 +232,48 @@ tAssignment (StmAssign vars exps) = do
 
 getTypeExp :: Expr -> TypeState T
 getTypeExp = \case
-    ExpNil                     -> return . TF $ FNil
-    ExpTrue                    -> return . TF $ FL LTrue
-    ExpFalse                   -> return . TF $ FL LFalse
-    ExpInt s                   -> return . TF . FL $ LInt s
-    ExpFloat s                 -> return . TF . FL $ LFloat s
-    ExpString s                -> return . TF . FL $ LString s
-    ExpTypeCoercion f _        -> return . TF $ f
-    ExpVar var                 -> lookupGamma var 
-    e@(ExpABinOp Add _ _)      -> TF <$> tArith e
-    e@(ExpABinOp Div _ _)      -> TF <$> tDiv e
-    e@(ExpABinOp Mod _ _)      -> TF <$> tMod e    
-    e@(ExpABinOp Concat _ _)   -> TF <$> tConcat e
-    e@(ExpABinOp Equals _ _)   -> TF <$> tEqual e
-    e@(ExpABinOp IntDiv _ _)   -> TF <$> tIntDiv e
-    e@(ExpABinOp LessThan _ _) -> TF <$> tOrder e
-    e@(ExpBBinOp Amp _ _)      -> TF <$> tBitWise e
-    e@(ExpBBinOp And _ _)      -> TF <$> tAnd e
-    e@(ExpBBinOp Or _ _)       -> TF <$> tOr e
-    e@(ExpUnaryOp Not _)       -> TF <$> tNot e
-    e@(ExpUnaryOp Hash _)      -> TF <$> tLen e
-    f@(ExpFunDecl _ _ _)       -> TF <$> tFun f
+    ExpNil                       -> return . TF $ FNil
+    ExpTrue                      -> return . TF $ FL LTrue
+    ExpFalse                     -> return . TF $ FL LFalse
+    ExpInt s                     -> return . TF . FL $ LInt s
+    ExpFloat s                   -> return . TF . FL $ LFloat s
+    ExpString s                  -> return . TF . FL $ LString s
+    ExpTypeCoercion f _          -> return . TF $ f
+    ExpVar var                   -> lookupGamma var 
+    e@(ExpABinOp Add _ _)        -> TF <$> tArith e
+    e@(ExpABinOp Div _ _)        -> TF <$> tDiv e
+    e@(ExpABinOp Mod _ _)        -> TF <$> tMod e    
+    e@(ExpABinOp Concat _ _)     -> TF <$> tConcat e
+    e@(ExpABinOp Equals _ _)     -> TF <$> tEqual e
+    e@(ExpABinOp IntDiv _ _)     -> TF <$> tIntDiv e
+    e@(ExpABinOp LessThan _ _)   -> TF <$> tOrder e
+    e@(ExpBBinOp Amp _ _)        -> TF <$> tBitWise e
+    e@(ExpBBinOp And _ _)        -> TF <$> tAnd e
+    e@(ExpBBinOp Or _ _)         -> TF <$> tOr e
+    e@(ExpUnaryOp Not _)         -> TF <$> tNot e
+    e@(ExpUnaryOp Hash _)        -> TF <$> tLen e
+    f@(ExpFunDecl _ _ _)         -> TF <$> tFun f
+    t@(ExpTableConstructor es a) -> TF <$> tConstr es a
+
+
+tConstr :: [(Expr, Expr)] -> Maybe Appl -> TypeState F
+tConstr es Nothing = do
+  keyTypes <- mapM (getTypeExp . fst) es
+  mapTypes <- mapM (getTypeExp . snd) es
+  fTypes <- mapM inferF keyTypes
+  vTypes <- mapM inferV mapTypes
+  let tableType = FTable (zip fTypes vTypes) Unique
+  if wf tableType then return tableType else throwError "Table is not well formed"
+
+  where inferF :: T -> TypeState F
+        inferF (TF f) = return f
+        inferF _ = throwError "tConstr, table fields should be F"
+        inferV :: T -> TypeState V
+        inferV (TF f) = return . VF $ f
+        inferV _ = throwError "tConstr, table fields should be F"
+        
+
+
 
 tFun :: Expr -> TypeState F
 tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do

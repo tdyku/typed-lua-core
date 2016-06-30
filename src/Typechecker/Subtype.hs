@@ -58,15 +58,18 @@ tupleZipE ls l rs r | length ls == length rs = zip ls rs
 
 
 -- subtyping for V
-cSub, oSub, iSub :: V -> V -> Bool
+cSub, oSub, uSub :: V -> V -> Bool
 cSub (VF f1) (VF f2) = f1 <? f2 && f2 <? f1
 cSub (VConst f1) (VConst f2) = f1 <? f2
 cSub (VF f1) (VConst f2) = f1 <? f2
 
-oSub = undefined
-iSub = undefined
--- subtyping for V
--- subtyping for V
+uSub (VF f1) (VF f2) = f1 <? f2 
+uSub (VConst f1) (VConst f2) = f1 <? f2
+uSub (VConst f1) (VF f2) = f1 <? f2
+uSub (VF f1) (VConst f2) = f1 <? f2
+
+oSub (VF FNil) (VF f) = FNil <? f
+oSub (VF FNil) (VConst f) = FNil <? f
 
 
 

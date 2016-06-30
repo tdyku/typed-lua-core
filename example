@@ -1,2 +1,2 @@
-local a,b = 1,{} in
+local a:number,b:{"dupa":1}_closed = 1,{["dupa"] = 1} in
    skip
