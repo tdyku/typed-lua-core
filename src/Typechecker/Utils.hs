@@ -9,7 +9,15 @@ import Types                    (F(..), T(..), P(..), S(..), E(..))
 import Data.Map
 import Prelude                   hiding (pi, lookup)
 import Data.Maybe               (fromMaybe, isNothing)
+
+
+allT, anyT :: [Bool] -> Bool
+allT = all (== True)
+anyT = any (== True)
+
+
 type Name = String
+
 
 data Env = Env {
     _gamma   :: [Map Name T],

@@ -2,21 +2,13 @@ module Typechecker.Subtype where
 
 import Data.Maybe (isNothing, fromJust)
 
-import Types      (F(..), L(..), B(..), P(..), S(..), T(..), E(..), V(..))
-import AST        (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
-
-
-allT = all (== True)
-anyT = any (== True)
+import Types             (F(..), L(..), B(..), P(..), S(..), T(..), E(..), V(..))
+import AST               (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
+import Typechecker.Utils (allT, anyT)
 
 
 class Subtype a where 
   (<?) :: a -> a -> Bool
-
-
--- Do we need it?
---class CSubtype a where    -- depth subtyping of table fields - <c
---  (<!) :: a -> a -> Bool
 
 
 instance Subtype F where
@@ -34,11 +26,6 @@ instance Subtype F where
     x                <? FUnion fs     = anyT $ fmap (x <?) fs
     x                <? y             = x == y
 
-
-instance Subtype V where
-    VF f1 <? VF f2 = f1 <? f2 && f2 <? f1
-    VConst f1 <? VConst f2 = f1 <? f2
-    VF f1 <? VConst f2 = f1 <? f2
 
 instance Subtype S where
     SUnion ss <? SP p      = allT $ fmap (<? p) ss
@@ -68,4 +55,18 @@ instance Subtype E where
 tupleZipE ls l rs r | length ls == length rs = zip ls rs
                    | length ls < length rs = zip (ls ++ repeat (if isNothing l then (TF FNil) else fromJust l)) rs
                    | otherwise = zip ls (rs ++ repeat (if isNothing r then (TF FNil) else fromJust r))
+
+
+-- subtyping for V
+cSub, oSub, iSub :: V -> V -> Bool
+cSub (VF f1) (VF f2) = f1 <? f2 && f2 <? f1
+cSub (VConst f1) (VConst f2) = f1 <? f2
+cSub (VF f1) (VConst f2) = f1 <? f2
+
+oSub = undefined
+iSub = undefined
+-- subtyping for V
+-- subtyping for V
+
+
 

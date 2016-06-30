@@ -3,11 +3,33 @@ module Typechecker.AuxFuns where
 import Control.Monad.State      (State, StateT, liftIO, get, put, evalStateT)
 import Control.Monad.Except     (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..))
+import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..), TType(..), V(..))
 import Data.Map                 (lookup)
 import Prelude                  hiding (pi, lookup)
 import Data.Maybe               (fromJust)
 import Typechecker.Subtype      ((<?))
+import Typechecker.Utils        (anyT, allT)
+
+
+wf :: F -> Bool
+wf (FTable tList _) = 
+    let fTypesEnum = zip [0..] (fmap fst tList)
+        vTypes = fmap (unwrapV . snd) tList
+        productList = [(x,y) | x <- fTypesEnum, y <- fTypesEnum] 
+        isSubtype ((n1, f1), (n2, f2)) = if n1 /= n2 && f1 <? f2 then True else False  -- we need all false
+        negList es = fmap not es
+        checkedSubtypes = negList $ fmap isSubtype productList
+        
+    in (allT checkedSubtypes) && (allT $ fmap (not . (tag Unique)) vTypes) && (allT $ fmap (not . (tag Open)) vTypes)  
+
+
+unwrapV :: V -> F
+unwrapV (VF f) = f
+unwrapV (VConst f) = f 
+
+tag :: TType -> F -> Bool
+tag t2 (FTable _ t1)  = t1 == t2
+tag t (FUnion fs) = anyT $ fmap (tag t) fs
 
 
 infer :: E -> Int -> T
