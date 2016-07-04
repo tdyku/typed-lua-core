@@ -14,7 +14,7 @@ import           Parser.Utils      (idVar, (<:>), (<++>), keyword, semicolon, sy
 
 
 pManyStm :: Parser A.Block
-pManyStm = A.Block <$> pStm `sepBy` semicolon
+pManyStm = A.Block <$> pStm `sepBy` semicolon <* eof
 
 pStm, pSSkip,  pSAssign, pSWhile, pSIf, pSTypedDecl, pSDecl, pSRecDecl, pSReturn, pSVoidAppl, pSMthDecl :: Parser A.Stm
 

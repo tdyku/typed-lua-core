@@ -1,2 +1,2 @@
-local a:number,b:{"dupa":1}_closed = 1,{["dupa"] = 1} in
-   skip
+local b:{string:(integer|nil)}_closed = {["x"]=1, ["y"]=2} in
+   skip		

@@ -5,7 +5,7 @@ import Data.Maybe (isNothing, fromJust)
 import Types             (F(..), L(..), B(..), P(..), S(..), T(..), E(..), V(..), TType(..))
 import AST               (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
 import Typechecker.Utils (allT, anyT)
-
+import Text.Show.Pretty  (ppShow    )
 
 class Subtype a where 
   (<?) :: a -> a -> Bool
@@ -32,6 +32,11 @@ instance Subtype F where
     x                     <? FUnion fs           = anyT $ fmap (x <?) fs
     x                     <? y                   = x == y
 
+data FieldSubtype = KVSubtype
+                  | NotSubtype {_valType :: V}
+                  | OnlyKSubtype
+                  deriving(Show, Eq) 
+
 
 sTable1, sTable2, sTable3, sTable4, sTable5, sTable6 :: F -> F -> Bool
 sTable1 (FTable lefts tt1) (FTable rights tt2) =
@@ -42,14 +47,16 @@ sTable1 (FTable lefts tt1) (FTable rights tt2) =
 
 
 sTable2 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let lefts  = zip3 ([0..]) (fst <$> ts1) (snd <$> ts1)
-        rights = zip3 ([0..]) (fst <$> ts2) (snd <$> ts2)
-        lrProd = [(x,y) | x <- lefts, y <- rights]
-        firstLaw ((_, f, v),(_, f', v')) = if f <? f' then v `uSub` v' else True
-        secondLaw ((i, f, v),(j, f', v')) = if f <? f' then not (VF FNil `oSub` v') else True 
-        condSubtyping1 = fmap firstLaw lrProd
-        condSubtyping2 = fmap secondLaw lrProd
-    in allT condSubtyping1 && allT condSubtyping2
+    let rule1 (f,v) (f',v') = if f <? f' then if v `uSub` v' then KVSubtype else OnlyKSubtype else NotSubtype v
+        find :: [FieldSubtype] -> Bool
+        find ((NotSubtype v):as) = (VF FNil) `oSub` v
+        find (_:as) = find as
+        find [] = False 
+        condSubtyping1 = fmap (\x -> let subresult = fmap (rule1 x) ts2
+                                     in if OnlyKSubtype `elem` subresult then False else if KVSubtype `elem` subresult then True else find subresult
+
+                              ) ts1
+    in allT condSubtyping1
  
 
 sTable3 (FTable ts1 tt1) (FTable ts2 tt2) = 
