@@ -47,6 +47,15 @@ sTable1 (FTable lefts tt1) (FTable rights tt2) =
 
 
 sTable2 (FTable ts1 tt1) (FTable ts2 tt2) = 
+    let rule1 (f,v) (f',v') = if f <? f' then v `uSub` v' else True
+        rule2 (f',_) (f,_) = f <? f'
+        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
+                                               in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
+    in allT condSubtyping1 && allT condSubtyping2
+ 
+
+sTable3 (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = if f <? f' then if v `uSub` v' then KVSubtype else OnlyKSubtype else NotSubtype v
         find :: [FieldSubtype] -> Bool
         find ((NotSubtype v):as) = (VF FNil) `oSub` v
@@ -57,18 +66,6 @@ sTable2 (FTable ts1 tt1) (FTable ts2 tt2) =
 
                               ) ts1
     in allT condSubtyping1
- 
-
-sTable3 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let lefts  = zip3 ([0..]) (fst <$> ts1) (snd <$> ts1)
-        rights = zip3 ([0..]) (fst <$> ts2) (snd <$> ts2)
-        lrProd = [(x,y) | x <- lefts, y <- rights]
-        rule1 (i,f,v) (j,f',v') = f <? f' && v `uSub` v'
-        firstLaw = fmap (\x -> (fmap (rule1 x) rights)) lefts
-        forEachExists = allT $ fmap anyT firstLaw
-        rule2 ((i, f, v),(j, f', v')) = if f <? f' then not (VF FNil `oSub` v') else True 
-        forEachDoesNotExist = allT $ fmap rule2 lrProd
-    in  forEachExists && forEachDoesNotExist
 
 
 sTable4 (FTable ts1 tt1) (FTable ts2 tt2) = 
