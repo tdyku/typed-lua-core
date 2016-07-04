@@ -51,56 +51,43 @@ sTable2 (FTable ts1 tt1) (FTable ts2 tt2) =
         rule2 (f',_) (f,_) = f <? f'
         condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
         condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
-                                               in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
+                                           in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
     in allT condSubtyping1 && allT condSubtyping2
  
 
 sTable3 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let rule1 (f,v) (f',v') = if f <? f' then if v `uSub` v' then KVSubtype else OnlyKSubtype else NotSubtype v
-        find :: [FieldSubtype] -> Bool
-        find ((NotSubtype v):as) = (VF FNil) `oSub` v
-        find (_:as) = find as
-        find [] = False 
-        condSubtyping1 = fmap (\x -> let subresult = fmap (rule1 x) ts2
-                                     in if OnlyKSubtype `elem` subresult then False else if KVSubtype `elem` subresult then True else find subresult
-
-                              ) ts1
-    in allT condSubtyping1
+    let rule1 (f,v) (f',v') = f <? f' && v `uSub` v'
+        rule2 (f',_) (f,_) = f <? f'
+        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
+                                           in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
+    in anyT condSubtyping1 && allT condSubtyping2
 
 
 sTable4 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let lefts  = zip3 ([0..]) (fst <$> ts1) (snd <$> ts1)
-        rights = zip3 ([0..]) (fst <$> ts2) (snd <$> ts2)
-        lrProd = [(x,y) | x <- lefts, y <- rights]
-        firstLaw ((_, f, v),(_, f', v')) = if f <? f' then v `cSub` v' else True
-        secondLaw ((i, f, v),(j, f', v')) = if f <? f' then not (VF FNil `oSub` v') else True 
-        condSubtyping1 = fmap firstLaw lrProd
-        condSubtyping2 = fmap secondLaw lrProd
+    let rule1 (f,v) (f',v') = if f <? f' then v `cSub` v' else True
+        rule2 (f',_) (f,_) = f <? f'
+        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
+                                           in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
     in allT condSubtyping1 && allT condSubtyping2
 
 
 sTable5 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let lefts  = zip3 ([0..]) (fst <$> ts1) (snd <$> ts1)
-        rights = zip3 ([0..]) (fst <$> ts2) (snd <$> ts2)
-        lrProd = [(x,y) | x <- lefts, y <- rights]
-        rule1 (i,f,v) (j,f',v') = f <? f' && v `cSub` v'
-        firstLaw = fmap (\x -> (fmap (rule1 x) rights)) lefts
-        forEachExists = allT $ fmap anyT firstLaw
-        rule2 ((i, f, v),(j, f', v')) = if f <? f' then not (VF FNil `oSub` v') else True 
-        forEachDoesNotExist = allT $ fmap rule2 lrProd
-    in  forEachExists && forEachDoesNotExist
+    let rule1 (f,v) (f',v') = f <? f' && v `cSub` v'
+        rule2 (f',_) (f,_) = f <? f'
+        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
+                                           in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
+    in anyT condSubtyping1 && allT condSubtyping2
 
 
 sTable6 (FTable ts1 tt1) (FTable ts2 tt2) = 
-    let lefts  = zip3 ([0..]) (fst <$> ts1) (snd <$> ts1)
-        rights = zip3 ([0..]) (fst <$> ts2) (snd <$> ts2)
-        rule12 (i,f,v) (j,f',v') = f <? f' && f' <? f && v `cSub` v'
-        firstLaw = fmap (\x -> (fmap (rule12 x) rights)) lefts
-        secondLaw = fmap (\x -> (fmap (rule12 x) lefts)) rights
-        forEachExistsij = allT $ fmap anyT firstLaw
-        forEachExistsji = allT $ fmap anyT secondLaw
-    in  forEachExistsij && forEachExistsji
-
+    let rule1 (f,v) (f',v') = f <? f' && f' <? f && v `cSub` v'
+        rule2 (f,v) (f',v') = f <? f' && f' <? f && v' `cSub` v
+        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = fmap allT $ fmap (\x -> fmap (rule2 x) ts1) ts2
+    in anyT condSubtyping1 && anyT condSubtyping2
 
 instance Subtype S where
     SUnion ss <? SP p      = allT $ fmap (<? p) ss
