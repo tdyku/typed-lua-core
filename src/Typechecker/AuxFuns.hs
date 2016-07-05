@@ -16,7 +16,7 @@ wf (FTable tList _) =
     let fTypesEnum = zip [0..] (fmap fst tList)
         vTypes = fmap (unwrapV . snd) tList
         productList = [(x,y) | x <- fTypesEnum, y <- fTypesEnum] 
-        isSubtype ((n1, f1), (n2, f2)) = if n1 /= n2 && f1 <? f2 then True else False  -- we need all false
+        isSubtype ((n1, f1), (n2, f2)) = n1 /= n2 && f1 <? f2  -- we need all false
         negList es = fmap not es
         checkedSubtypes = negList $ fmap isSubtype productList
         

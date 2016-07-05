@@ -1,3 +1,4 @@
+-- 1.
 local error,result = "",1 in
     local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
             local q,r = 0,0 in
@@ -10,3 +11,16 @@ local error,result = "",1 in
     in
         local p,q = idiv(10,2) in
             if p then result = q else error =  q
+
+-- 2. Unique -- Closed table
+local b:{string:(integer|nil), "z":(1|nil)}_closed = {["x"]=1, ["y"]=2} in
+   skip     
+
+-- 3. Table construction
+
+local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
+    skip 
+in
+    local a = {["x"] = 1, ["y"] = 2, idiv(10, 5)} in
+        skip
+

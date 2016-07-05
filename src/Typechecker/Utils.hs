@@ -2,13 +2,15 @@
 module Typechecker.Utils where
 
 
-import Control.Monad.State      (State, StateT, liftIO, get, put, evalStateT)
-import Control.Monad.Except     (ExceptT, throwError, runExceptT)
+import Control.Monad.State   (State, StateT, liftIO, get, put, evalStateT)
+import Control.Monad.Except  (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Types                    (F(..), T(..), P(..), S(..), E(..))
+import Types                 (F(..), T(..), P(..), S(..), E(..))
 import Data.Map
-import Prelude                   hiding (pi, lookup)
-import Data.Maybe               (fromMaybe, isNothing)
+import Prelude               hiding (pi, lookup)
+import Data.Maybe            (fromMaybe, isNothing)
+import Data.List             (nub)
+import Text.Show.Pretty      (ppShow)
 
 
 allT, anyT :: [Bool] -> Bool
@@ -107,7 +109,7 @@ popScopes = do
 
 
 tlog :: (Show a) => a -> TypeState ()
-tlog = liftIO . print
+tlog = liftIO . putStrLn . ppShow
 
 e2s :: E -> TypeState S
 e2s (E ts mb) = do
@@ -134,5 +136,24 @@ sp2e :: S -> E
 sp2e (SP (P fs mf)) = E (fmap TF fs) (fmap TF mf)
 
 
+
+getFsFromP :: P -> [F]
+getFsFromP (P fs _) = fs
+
+getMFromP :: P -> F
+getMFromP (P _ mf) = fromMaybe FNil mf
+
+
 s2f :: S -> ([F], F)
 s2f (SP (P fs mf)) = (fs, fromMaybe FNil mf) 
+--s2f (SUnion ps) | length ps == 1 = s2f (SP . head $ ps)
+s2f (SUnion ps) = 
+    let pNum = length ps
+        mLen = maximum $ fmap (length . getFsFromP) ps
+        extent (P fs mf) = fs ++ replicate (mLen - (length fs)) (fromMaybe FNil mf)
+        extended = fmap extent ps
+        varargs = reverse . nub . reverse $ fmap getMFromP ps ++ [FNil]
+        sVarargs = if length varargs == 1 then varargs !! 0 else FUnion varargs
+        merge i n ms es | i == n = ms
+                        | otherwise = merge (i+1) n (ms ++ [FUnion (fmap (!! i) es)]) es
+    in  (merge 0 mLen [] extended, sVarargs)

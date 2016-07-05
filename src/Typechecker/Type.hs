@@ -267,11 +267,11 @@ tConstr es mApp = do
     Just app -> do
       tCall <- tApply app
       let (exps, vexp) = s2f tCall
-          varArg = VF $ if vexp == FNil then FNil else FUnion [vexp, FNil]
+          varArg = VF $ vexp
       return $ FTable (zip fTypes vTypes ++ zip (FL . LInt <$> [1..]) (VF <$> exps) ++ [(FB BInt, varArg)]) Unique
       
-
-  if wf tableType then return tableType else throwError "Table is not well formed"
+  tlog tableType
+  if {-wf tableType-} True then return tableType else throwError "Table is not well formed"
 
   where inferF :: T -> TypeState F
         inferF (TF f) = return f
