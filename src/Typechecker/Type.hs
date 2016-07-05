@@ -257,12 +257,20 @@ getTypeExp = \case
 
 
 tConstr :: [(Expr, Expr)] -> Maybe Appl -> TypeState F
-tConstr es Nothing = do
+tConstr es mApp = do
   keyTypes <- mapM (getTypeExp . fst) es
   mapTypes <- mapM (getTypeExp . snd) es
   fTypes <- mapM inferF keyTypes
   vTypes <- mapM inferV mapTypes
-  let tableType = FTable (zip fTypes vTypes) Unique
+  tableType <- case mApp of
+    Nothing -> return $ FTable (zip fTypes vTypes) Unique
+    Just app -> do
+      tCall <- tApply app
+      let (exps, vexp) = s2f tCall
+          varArg = VF $ if vexp == FNil then FNil else FUnion [vexp, FNil]
+      return $ FTable (zip fTypes vTypes ++ zip (FL . LInt <$> [1..]) (VF <$> exps) ++ [(FB BInt, varArg)]) Unique
+      
+
   if wf tableType then return tableType else throwError "Table is not well formed"
 
   where inferF :: T -> TypeState F

@@ -132,3 +132,7 @@ e2s (E ts mb) = do
 
 sp2e :: S -> E
 sp2e (SP (P fs mf)) = E (fmap TF fs) (fmap TF mf)
+
+
+s2f :: S -> ([F], F)
+s2f (SP (P fs mf)) = (fs, fromMaybe FNil mf) 
