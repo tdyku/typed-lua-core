@@ -11,6 +11,19 @@ import Typechecker.Subtype      ((<?))
 import Typechecker.Utils        (anyT, allT)
 
 
+
+vt :: F -> V -> V
+vt (FL _) (VConst v) = VConst . fix $ v
+vt (FL _) (VF v) = VF . fix $ v
+vt _ (VF f2) = VF . nilF . fix $ f2
+vt _ (VConst f2) = VConst . nilF . fix $ f2  
+
+fix :: F -> F
+fix (FUnion fs) = FUnion $ fmap fix fs
+fix (FTable ts Unique) = FTable ts Fixed
+fix (FTable ts Open  ) = FTable ts Fixed
+fix f = f
+
 isConst :: V -> Bool
 isConst (VF _) = False
 isConst (VConst _) = True

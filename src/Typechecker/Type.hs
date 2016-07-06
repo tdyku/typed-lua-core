@@ -14,7 +14,7 @@ import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..),
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst)
+import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst, vt)
 import Text.Show.Pretty (ppShow)
 
     
@@ -39,7 +39,7 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     let tvars = fmap snd fvars
         fvarsS = SP $ P tvars (Just FValue)
     case expListS <? fvarsS of
-        False -> throwError $ "tLocal1 error:\n" ++ show expListS ++ "\n" ++ show fvars 
+        False -> throwError $ "tLocal1 error:\n" ++ show expListS ++ "\n" ++ show fvarsS
         True  -> do
             mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
             mapM_ tStmt blck 
@@ -81,6 +81,7 @@ getSimpleTypeVar (IdVal id) = do
   (lookupGamma id) >>= \case
         (TF f) -> return f
         (TFilter _ f1) -> return f1      
+
 getSimpleTypeVar (TableVal id expr) = do
   table <- getSimpleTypeVar (IdVal id)
   TF index <- getTypeExp expr
@@ -94,6 +95,21 @@ getSimpleTypeVar (TableVal id expr) = do
         scanPairs [] _ = throwError $ "No such field in table!"
         scanPairs (t:ts) f = if f <? (fst t) && not  (isConst $ snd t) then return . rconst . snd $ t else scanPairs ts f
 
+getSimpleTypeVar (TypeCoercionVal id expr v) = do
+  table <- getSimpleTypeVar (IdVal id)
+  TF fNew <- getTypeExp expr
+  let vNew = vt fNew v
+  consistent <- checkConsistency table fNew
+  if consistent then updateTab id table fNew vNew >> (return . rconst $ vNew)
+    else throwError "Refinement violate's consistency."
+
+  where checkConsistency :: F -> F -> TypeState Bool
+        checkConsistency (FTable tt1 tp) f = case tp of 
+          Closed -> throwError "Coercion works only with Open and Unique tables, not closed"
+          Fixed  -> throwError "Coercion works only with Open and Unique tables, not fixed"
+          _ -> return $ allT $ fmap (not . (f <?) . fst) tt1
+        updateTab id (FTable ts tp) f v = insertToGamma id (TF $ FTable (ts ++ [(f,v)]) tp)
+   
 
  --T-EXPLIST
 tExpList :: ExprList -> TypeState E
