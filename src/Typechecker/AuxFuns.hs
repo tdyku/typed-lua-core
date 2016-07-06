@@ -36,6 +36,10 @@ open (FTable ts Unique) = FTable ts Open
 open f = f
 
 
+reopen :: F -> F
+reopen (FTable ts Closed) = FTable ts Open
+reopen f = f
+
 
 isConst :: V -> Bool
 isConst (VF _) = False

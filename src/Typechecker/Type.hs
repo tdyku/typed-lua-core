@@ -14,7 +14,7 @@ import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..),
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst, vt, open, close, fix)
+import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst, vt, open, reopen, close, fix, tag)
 import Text.Show.Pretty (ppShow)
 
     
@@ -272,7 +272,7 @@ getTypeExp = \case
     ExpInt s                     -> return . TF . FL $ LInt s
     ExpFloat s                   -> return . TF . FL $ LFloat s
     ExpString s                  -> return . TF . FL $ LString s
-    ExpTypeCoercion f _          -> return . TF $ f
+    c@(ExpTypeCoercion _ _)      -> TF <$> tCoercion c
     v@(ExpVar var)               -> tLookUpId v 
     e@(ExpABinOp Add _ _)        -> TF <$> tArith e
     e@(ExpABinOp Div _ _)        -> TF <$> tDiv e
@@ -289,6 +289,18 @@ getTypeExp = \case
     f@(ExpFunDecl _ _ _)         -> TF <$> tFun f
     t@(ExpTableConstructor es a) -> TF <$> tConstr es a
     a@(ExpTableAccess _ _)       -> TF <$> tIndexRead a
+
+
+tCoercion :: Expr -> TypeState F
+tCoercion (ExpTypeCoercion f id) = do
+  TF idExp <- getTypeExp (ExpVar id)
+  if idExp <? f 
+    then if tag Closed f
+           then insertToGamma id (TF . reopen $ f) >> (return f)
+           else if tag Fixed f
+                  then insertToGamma id (TF f) >> (return f)
+                  else throwError $ "Error in coercion: " ++ show id ++ " is neither closed nor fixed"
+    else throwError $ "Error in coercion: " ++ show id ++ " is not subtype of: " ++ ppShow f
 
 
 tLookUpId :: Expr -> TypeState T
