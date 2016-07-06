@@ -39,7 +39,7 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     let tvars = fmap snd fvars
         fvarsS = SP $ P tvars (Just FValue)
     case expListS <? fvarsS of
-        False -> throwError $ "tLocal1 error:\n" ++ show expListS ++ "\n" ++ show fvarsS
+        False -> throwError $ "tLocal1 error:\n" ++ show fvarsS ++ "\n" ++ show expListS
         True  -> do
             mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
             mapM_ tStmt blck 
@@ -256,7 +256,7 @@ tAssignment (StmAssign vars exps) = do
     s1 <- e2s texps
     s2 <- tLHSList vars
     if s1 <? s2
-    then tlog $ "Assignment: " ++ show s1 ++ " " ++ show s2
+    then return ()
     else throwError $ "False in tAssignment" ++ show s1 ++ show s2
 
 
@@ -285,6 +285,11 @@ getTypeExp = \case
     f@(ExpFunDecl _ _ _)         -> TF <$> tFun f
     t@(ExpTableConstructor es a) -> TF <$> tConstr es a
     a@(ExpTableAccess _ _)       -> TF <$> tIndexRead a
+
+
+--tLookUpId :: Expr -> TypeState T
+--tLookUpId (ExpVar var) = do
+  
 
 
 
@@ -318,8 +323,7 @@ tConstr es mApp = do
       let (exps, vexp) = s2f tCall
           varArg = VF $ vexp
       return $ FTable (zip fTypes vTypes ++ zip (FL . LInt <$> [1..]) (VF <$> exps) ++ [(FB BInt, varArg)]) Unique
-      
-  tlog tableType
+  -- TODO: well-formed checking 
   if {-wf tableType-} True then return tableType else throwError "Table is not well formed"
 
   where inferF :: T -> TypeState F

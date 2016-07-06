@@ -24,6 +24,19 @@ fix (FTable ts Unique) = FTable ts Fixed
 fix (FTable ts Open  ) = FTable ts Fixed
 fix f = f
 
+close :: F -> F
+close (FUnion fs) = FUnion $ fmap close fs
+close (FTable ts Unique) = FTable ts Closed
+close (FTable ts Open  ) = FTable ts Closed
+close f = f
+
+open :: F -> F
+open (FUnion fs) = FUnion $ fmap open fs
+open (FTable ts Unique) = FTable ts Open
+open f = f
+
+
+
 isConst :: V -> Bool
 isConst (VF _) = False
 isConst (VConst _) = True

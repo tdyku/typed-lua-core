@@ -27,8 +27,7 @@ data Expr = ExpNil                         -- nil
           | ExpTableAccess Expr Expr         -- TODO: e1[e2]
           | ExpTypeCoercion F Id           -- <F> id
           | ExpFunDecl ParamList S Block   -- fund
-          | ExpTableConstructor TableList (Maybe Appl) 
-            -- {[e1] = e2+} | {[e1] = e2+, me}
+          | ExpTableConstructor TableList (Maybe Appl) -- {[e1] = e2+} | {[e1] = e2+, me}
           | ExpABinOp AOp Expr Expr        -- e1 + e2, e1 .. e2, e1 == e2, e1 < e2           
           | ExpBBinOp BOp Expr Expr        -- e1 & e2, e1 and e2, e1 or e2
           | ExpUnaryOp UnOp Expr           -- not e, # e

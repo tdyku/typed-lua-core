@@ -1,6 +1,6 @@
 module Typechecker.Subtype where
 
-import Data.Maybe (isNothing, fromJust)
+import Data.Maybe (isNothing, fromMaybe)
 
 import Types             (F(..), L(..), B(..), P(..), S(..), T(..), E(..), V(..), TType(..))
 import AST               (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..))
@@ -53,10 +53,10 @@ sTable2 (FTable ts1 tt1) (FTable ts2 tt2) =
 sTable3 (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = f <? f' && v `uSub` v'
         rule2 (f',_) (f,_) = f <? f'
-        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping1 = fmap anyT $ fmap (\x -> fmap (rule1 x) ts2) ts1
         condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
                                            in if all (== False) subResult then (VF FNil) `oSub` v' else True) ts2
-    in anyT condSubtyping1 && allT condSubtyping2
+    in allT condSubtyping1 && allT condSubtyping2
 
 
 sTable4 (FTable ts1 tt1) (FTable ts2 tt2) = 
@@ -95,8 +95,8 @@ instance Subtype P where
 
 
 tupleZip ls l rs r | length ls == length rs = zip ls rs
-                   | length ls < length rs = zip (ls ++ repeat (if isNothing l then FNil else fromJust l)) rs
-                   | otherwise = zip ls (rs ++ repeat (if isNothing r then FNil else fromJust r))
+                   | length ls < length rs = zip (ls ++ repeat (fromMaybe FNil l)) rs
+                   | otherwise = zip ls (rs ++ repeat (fromMaybe FNil r))
 
 
 instance Subtype T where
@@ -110,8 +110,8 @@ instance Subtype E where
 
 
 tupleZipE ls l rs r | length ls == length rs = zip ls rs
-                   | length ls < length rs = zip (ls ++ repeat (if isNothing l then (TF FNil) else fromJust l)) rs
-                   | otherwise = zip ls (rs ++ repeat (if isNothing r then (TF FNil) else fromJust r))
+                   | length ls < length rs = zip (ls ++ repeat (fromMaybe (TF FNil) l)) rs
+                   | otherwise = zip ls (rs ++ repeat (fromMaybe (TF FNil) r))
 
 
 -- subtyping for V
