@@ -70,7 +70,7 @@ insertToGamma id tp = do
     env <- get
     let (gMap:gMaps) = env ^. gamma
         newGamma = insert id tp gMap
-    tlog $ "Inserting: " ++ ppShow tp
+    tlog $ "Inserting: " ++ id ++ " of type: " ++ ppShow tp
     put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter)
 
 newGammaScope :: TypeState ()

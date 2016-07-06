@@ -24,3 +24,10 @@ in
     local a = {["x"] = 1, ["y"] = 2, idiv(10, 5)} in
         skip
 
+
+
+-- 4. This should not typeckeck
+local a : {}_unique = {} in
+local b : {}_open = a in
+    a["x"] <string> = "foo";
+    b["x"] <integer> = 1
