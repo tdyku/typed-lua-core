@@ -14,8 +14,8 @@ import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..),
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf)
-
+import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst)
+import Text.Show.Pretty (ppShow)
 
     
 
@@ -74,14 +74,28 @@ tLHSList :: [LHVal] -> TypeState S
 tLHSList vars = do
     fs <- mapM getSimpleTypeVar vars
     return . SP $ P fs (Just FValue)
-    where getSimpleTypeVar :: LHVal -> TypeState F
-          getSimpleTypeVar (IdVal id) = do
-            (lookupGamma id) >>= \case
-                  (TF f) -> return f
-                  (TFilter _ f1) -> return f1
 
 
- --T-EXPLIST 1, 1, 1
+getSimpleTypeVar :: LHVal -> TypeState F
+getSimpleTypeVar (IdVal id) = do
+  (lookupGamma id) >>= \case
+        (TF f) -> return f
+        (TFilter _ f1) -> return f1      
+getSimpleTypeVar (TableVal id expr) = do
+  table <- getSimpleTypeVar (IdVal id)
+  TF index <- getTypeExp expr
+  findValue table index
+  where findValue :: F -> F -> TypeState F
+        findValue (FTable ts _) f = scanPairs ts f
+        findValue FAny _ = return FAny
+        findValue t _ = throwError $ "Left side of accessor should be table."
+        
+        scanPairs :: [(F, V)] -> F -> TypeState F
+        scanPairs [] _ = throwError $ "No such field in table!"
+        scanPairs (t:ts) f = if f <? (fst t) && not  (isConst $ snd t) then return . rconst . snd $ t else scanPairs ts f
+
+
+ --T-EXPLIST
 tExpList :: ExprList -> TypeState E
 tExpList (ExprList exps Nothing) = E <$> (mapM getTypeExp exps) <*> (pure . Just . TF $ FNil)
 tExpList (ExprList exps (Just me)) = do
@@ -254,6 +268,25 @@ getTypeExp = \case
     e@(ExpUnaryOp Hash _)        -> TF <$> tLen e
     f@(ExpFunDecl _ _ _)         -> TF <$> tFun f
     t@(ExpTableConstructor es a) -> TF <$> tConstr es a
+    a@(ExpTableAccess _ _)       -> TF <$> tIndexRead a
+
+
+
+tIndexRead :: Expr -> TypeState F
+tIndexRead (ExpTableAccess e1 e2) = do
+    TF table <- getTypeExp e1
+    TF index <- getTypeExp e2
+    findValue table index
+
+  where findValue :: F -> F -> TypeState F
+        findValue (FTable ts _) f = scanPairs ts f
+        findValue FAny _ = return FAny
+        findValue t _ = throwError $ "Left side of accessor should be table."
+        
+        scanPairs :: [(F, V)] -> F -> TypeState F
+        scanPairs [] _ = throwError $ "No such field in table!"
+        scanPairs (t:ts) f = if f <? (fst t) then return . rconst . snd $ t else scanPairs ts f
+
 
 
 tConstr :: [(Expr, Expr)] -> Maybe Appl -> TypeState F

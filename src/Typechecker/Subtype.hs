@@ -12,8 +12,8 @@ class Subtype a where
 
 
 instance Subtype F where
-    (FL LFalse       )    <? (FB BBoolean   )    = True
-    (FL LTrue        )    <? (FB BBoolean   )    = True
+    (FL  LFalse      )    <? (FB BBoolean   )    = True
+    (FL  LTrue       )    <? (FB BBoolean   )    = True
     (FL (LString _  ))    <? (FB BString    )    = True
     (FL (LInt    _  ))    <? (FB BInt       )    = True
     (FL (LInt    _  ))    <? (FB BNumber    )    = True
@@ -31,11 +31,6 @@ instance Subtype F where
     FUnion fs             <? x                   = allT $ fmap (<? x) fs
     x                     <? FUnion fs           = anyT $ fmap (x <?) fs
     x                     <? y                   = x == y
-
-data FieldSubtype = KVSubtype
-                  | NotSubtype {_valType :: V}
-                  | OnlyKSubtype
-                  deriving(Show, Eq) 
 
 
 sTable1, sTable2, sTable3, sTable4, sTable5, sTable6 :: F -> F -> Bool

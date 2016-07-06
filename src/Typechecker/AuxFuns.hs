@@ -11,6 +11,16 @@ import Typechecker.Subtype      ((<?))
 import Typechecker.Utils        (anyT, allT)
 
 
+isConst :: V -> Bool
+isConst (VF _) = False
+isConst (VConst _) = True
+
+
+rconst :: V -> F
+rconst (VF f) = f
+rconst (VConst f) = f
+
+
 wf :: F -> Bool
 wf (FTable tList _) = 
     let fTypesEnum = zip [0..] (fmap fst tList)
