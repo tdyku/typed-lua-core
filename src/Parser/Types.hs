@@ -45,7 +45,7 @@ pP = T.P <$> between (symbol '(') (symbol ')') (pF `sepBy` comma) <*> pure Nothi
 
 -- F types
 pF, pFL, pFB, pFNil, pFValue, pFAny, pFSelf, pFUnion, pFFunction, pFTable, pFVariable, pFRecursive :: Parser T.F
-pF = choice [pFL, pFB, pFValue, pFAny, pFSelf, pFNil, pFTable, try pFFunction, pFUnion{- , pFVariable, pFRecursive-}]
+pF = choice [pFL, pFB, pFValue, pFAny, pFSelf, pFNil, pFTable, try pFFunction, pFUnion, pFRecursive, pFVariable]
 
 pFL = T.FL <$> pLitType
 pFB = T.FB <$> pBaseType
@@ -58,7 +58,7 @@ pFUnion =  between (symbol '(') (symbol ')') (T.FUnion <$> pF <:> many1 (symbol 
 pFFunction =  T.FFunction <$> pS <* keyword "->" <*> pS <?> "pFFunction"
 pFTable  =  T.FTable <$> between (symbol '{') (symbol '}') (((,) <$> pF <* symbol ':' <*> pV) `sepBy` comma) <*> option T.Unique pTableType
 pFVariable = T.FVariable <$> idVar
-pFRecursive = undefined
+pFRecursive = char 'u' *> (T.FRecursive <$> idVar <*> (char '.' *> pF)) 
 pTableType = symbol '_' *> choice [ keyword "unique" *> pure T.Unique
                                   , keyword "fixed" *> pure T.Fixed
                                   , keyword "closed" *> pure T.Closed
