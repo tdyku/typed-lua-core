@@ -12,13 +12,13 @@ class Subtype a where
 
 
 instance Subtype F where
-    (FL  LFalse      )    <? (FB BBoolean   )    = True
-    (FL  LTrue       )    <? (FB BBoolean   )    = True
-    (FL (LString _  ))    <? (FB BString    )    = True
-    (FL (LInt    _  ))    <? (FB BInt       )    = True
-    (FL (LInt    _  ))    <? (FB BNumber    )    = True
-    (FL (LFloat  _  ))    <? (FB BNumber    )    = True
-    (FB  BInt        )    <? (FB BNumber    )    = True
+    FL  LFalse            <? FB BBoolean       = True
+    FL  LTrue             <? FB BBoolean       = True
+    FL (LString _  )      <? FB BString        = True
+    FL (LInt    _  )      <? FB BInt           = True
+    FL (LInt    _  )      <? FB BNumber        = True
+    FL (LFloat  _  )      <? FB BNumber        = True
+    FB  BInt              <? FB BNumber        = True
     t1@(FTable ts1 tt1  ) <? t2@(FTable ts2 tt2) | tt1 == Unique && tt2 == Closed = sTable2 t1 t2
                                                  | tt1 `elem` [Fixed, Closed] && tt2 == Closed = sTable1 t1 t2 
                                                  | tt1 == Unique && tt2 `elem` [Unique, Open, Fixed] = sTable3 t1 t2

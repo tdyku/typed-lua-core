@@ -24,18 +24,19 @@ type Name = String
 data Env = Env {
     _gamma   :: [Map Name T],
     _pi      :: [Map Int  S],
-    _counter :: Int
+    _counter :: Int,
+    _assumpt :: [(F, F)]
 }
 makeLenses ''Env
 
 type TypeState a = ExceptT String (StateT Env IO) a
 
-runTypechecker y p = evalStateT (runExceptT $ p y) (Env [empty] [empty] 0) 
+runTypechecker y p = evalStateT (runExceptT $ p y) (Env [empty] [empty] 0 []) 
 
 tic :: TypeState Int
 tic = do
     env <- get
-    put $ Env (env ^. gamma) (env ^. pi) (env ^. counter + 1)
+    put $ Env (env ^. gamma) (env ^. pi) (env ^. counter + 1) (env ^. assumpt)
     return $ env ^. counter
 
 lookupGamma :: String -> TypeState T
@@ -63,7 +64,7 @@ insertSToPi i s = do
     env <- get
     let (piMap:piMaps) = env ^. pi
         newPI = insert i s piMap
-    put $ Env (env ^. gamma) (newPI:piMaps) (env ^. counter)
+    put $ Env (env ^. gamma) (newPI:piMaps) (env ^. counter) (env ^. assumpt)
 
 insertToGamma :: String -> T -> TypeState ()
 insertToGamma id tp = do
@@ -71,42 +72,42 @@ insertToGamma id tp = do
     let (gMap:gMaps) = env ^. gamma
         newGamma = insert id tp gMap
     tlog $ "Inserting: " ++ id ++ " of type: " ++ ppShow tp
-    put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter)
+    put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter) (env ^. assumpt)
 
 newGammaScope :: TypeState ()
 newGammaScope = do
     env <- get
-    put $ Env (mempty : env ^. gamma) (env ^. pi) (env ^. counter)
+    put $ Env (mempty : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
 newPiScope :: TypeState ()
 newPiScope = do
     env <- get
-    put $ Env (env ^. gamma) (mempty : env ^. pi) (env ^. counter)
+    put $ Env (env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
 newScopes :: TypeState ()
 newScopes = do
     env <- get
-    put $ Env (mempty : env ^. gamma) (mempty : env ^. pi) (env ^. counter)
+    put $ Env (mempty : env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
 popGammaScope :: TypeState ()
 popGammaScope = do
     env <- get
-    put $ Env (tail $ env ^. gamma) (env ^. pi) (env ^. counter)
+    put $ Env (tail $ env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
 popPiScope :: TypeState ()
 popPiScope = do
     env <- get
-    put $ Env (env ^. gamma) (tail $ env ^. pi) (env ^. counter)
+    put $ Env (env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
 popScopes :: TypeState ()
 popScopes = do
     env <- get
-    put $ Env (tail $ env ^. gamma) (tail $ env ^. pi) (env ^. counter)   
+    put $ Env (tail $ env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. assumpt)  
 
 
 tlog :: (Show a) => a -> TypeState ()
