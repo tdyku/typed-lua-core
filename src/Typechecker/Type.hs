@@ -379,10 +379,13 @@ tConstr es mApp = do
 tFun :: Expr -> TypeState F
 tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
     newScopes
+    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
     let argType = SP $ P (fmap snd tIds) mf
     mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+    closeAll
     tBlock blk
-
+    openSet (concat $ fmap (frv []) b)
+    closeSet (filteredFav . concat $ fmap (fav []) b)
     popScopes
     return $ FFunction argType s
 
