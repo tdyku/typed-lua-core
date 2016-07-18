@@ -25,9 +25,10 @@ instance Subtype F where
                                                  | tt1 == Open && tt2 == Closed = sTable4 t1 t2
                                                  | tt1 == Open && tt2 `elem` [Open, Fixed] = sTable5 t1 t2
                                                  | tt1 == Fixed && tt2 == Fixed = sTable6 t1 t2
-    _                     <?  FValue             = True
-    _                     <?  FAny               = True
-    FAny                  <?  _                  = True
+    FFunction s1 s2       <? FFunction s3 s4     = s3 <? s1 && s2 <? s4                                              
+    _                     <? FValue              = True
+    _                     <? FAny                = True
+    FAny                  <? _                   = True
     FUnion fs             <? x                   = allT $ fmap (<? x) fs
     x                     <? FUnion fs           = anyT $ fmap (x <?) fs
     x                     <? y                   = x == y

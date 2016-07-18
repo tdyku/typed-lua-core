@@ -3,14 +3,43 @@ module Typechecker.AuxFuns where
 import Control.Monad.State      (State, StateT, liftIO, get, put, evalStateT)
 import Control.Monad.Except     (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..), TType(..), V(..))
 import Data.Map                 (lookup)
 import Prelude                  hiding (pi, lookup)
 import Data.Maybe               (fromJust)
+
 import Typechecker.Subtype      ((<?))
 import Typechecker.Utils        (anyT, allT)
+import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..), TType(..), V(..))
+import AST                      (LHVal(..), Stm(..), Expr(..), Block(..), ExprList(..))
 
 
+-- catches everything from left side
+fav :: [LHVal] -> Stm -> [LHVal]
+fav elems (StmAssign e1 _) = elems ++ e1
+fav elems (StmWhile _ (Block stms)) = elems ++ (concat $ fmap (fav []) stms)                      
+fav elems (StmIf _ (Block b1) (Block b2)) = elems ++ (concat $ fmap (fav []) b1) ++ (concat $ fmap (fav []) b2)                   
+fav elems (StmTypedVarDecl ids _ (Block b1)) = elems ++ (fmap (IdVal . fst) ids) ++ (concat $ fmap (fav []) b1) 
+fav elems (StmVarDecl ids _ (Block b1)) = elems ++ fmap IdVal ids ++ (concat $ fmap (fav []) b1)           
+fav elems (StmRecDecl (id,_) _ (Block b1)) = elems ++ [IdVal id] ++  (concat $ fmap (fav []) b1)              
+fav elems _ = elems      
+
+
+-- catches everything from right side
+frv :: [String] -> Stm -> [String]
+frv elems (StmAssign _ (ExprList ex1 _)) = elems ++ (fmap getId $ filter isVar ex1)
+frv elems (StmWhile _ (Block stms)) = elems ++ (concat $ fmap (frv []) stms)                      
+frv elems (StmIf _ (Block b1) (Block b2)) = elems ++ (concat $ fmap (frv []) b1) ++ (concat $ fmap (frv []) b2)                   
+frv elems (StmTypedVarDecl _ (ExprList ex1 _) (Block b1)) = elems ++ (fmap getId $ filter isVar ex1) ++ (concat $ fmap (frv []) b1) 
+frv elems (StmVarDecl _ (ExprList ex1 _) (Block b1)) = elems ++ (fmap getId $ filter isVar ex1) ++ (concat $ fmap (frv []) b1)           
+frv elems (StmRecDecl _ (ExprList ex1 _) (Block b1)) = elems ++ [IdVal id] ++  (concat $ fmap (fav []) b1)              
+frv elems _ = elems      
+
+isVar :: Expr -> Bool
+isVar (ExpVar _) = True
+isVar _ = False
+
+getId :: Expr -> String
+getId (ExpVar id) = id
 
 vt :: F -> V -> V
 vt (FL _) (VConst v) = VConst . fix $ v
