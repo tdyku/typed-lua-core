@@ -170,3 +170,5 @@ s2f (SUnion ps) =
         merge i n ms es | i == n = ms
                         | otherwise = merge (i+1) n (ms ++ [FUnion (fmap (!! i) es)]) es
     in  (merge 0 mLen [] extended, sVarargs)
+
+

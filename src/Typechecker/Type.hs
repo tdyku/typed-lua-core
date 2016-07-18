@@ -4,11 +4,12 @@
 
 module Typechecker.Type where
 
-import Data.Map                 (Map, lookup, insert, empty)
+import Data.Map                 (Map, lookup, insert, empty, mapMaybeWithKey)
 import Control.Monad.Except     (throwError)
 import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
+import Prelude                  hiding (pi)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
@@ -243,28 +244,28 @@ tIF (StmIf cond tBlk eBlk) =
 tReturn :: Stm -> TypeState ()
 tReturn (StmReturn explist) = return () -- we typecheck returns in function body 
 
+
 tWhile :: Stm -> TypeState ()
 tWhile w@(StmWhile e@(ExpVar id) blk@(Block stms)) = do
-  tf <- getTypeExp e
-  insertToGamma id tf
-  gamma <- getGamma 
-  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
-      openedGamma = openSet (frv [] w) gamma 
-      closedGamma = closeSet (filteredFav $ fav [] w) openedGamma
-  insertGamma closedGamma
-  tBlock blk
-  popGammaScope
+ TF f <- getTypeExp e
+ insertToGamma id (TFilter f (filterFun f FNil))
+ closeAll
+ tBlock blk
+ let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+ insertToGamma id (TF f)
+ openSet (frv [] w)
+ closeSet (filteredFav $ fav [] w)
 
 
 tWhile w@(StmWhile e blk@(Block stms)) = do
   getTypeExp e
   gamma <- getGamma 
   let filteredFav nms = fmap getIdVal $ filter isIdVal nms
-      closedGamma = closeSet (filteredFav $ fav [] w) gamma
-      openedGamma = openSet (frv [] w) closedGamma 
-  insertGamma openedGamma
+  closeAll
   tBlock blk
-  popGammaScope
+  closeSet (filteredFav $ fav [] w)
+  openSet (frv [] w) 
+  
 
 
 isIdVal (IdVal _) = True
@@ -522,3 +523,36 @@ tLen (ExpUnaryOp Hash e1) = do
     else if f == FAny
          then return FAny 
          else throwError "tLen cannot typecheck"
+
+
+closeAll :: TypeState ()
+closeAll = do
+  env <- get
+  let closeEnv gm = fmap wrappedClose gm 
+      wrappedClose (TF f) = TF $ close f
+      wrappedClose x = x
+      gammaStack = fmap closeEnv (env ^. gamma)
+  put $ Env gammaStack (env ^. pi) (env ^. counter) (env ^. assumpt)  
+
+
+closeSet :: [String] -> TypeState ()
+closeSet nms = do
+  env <- get
+  let gammaMap = env ^. gamma 
+      wrappedClose nms key (TF f) = if key `elem` nms 
+                                    then Just . TF . close $ f
+                                    else Just . TF $ f
+      wrappedClose nms key t = Just t
+      closedStack = fmap (mapMaybeWithKey (wrappedClose nms)) gammaMap
+  put $ Env closedStack (env ^. pi) (env ^. counter) (env ^. assumpt)   
+
+openSet :: [String] -> TypeState ()
+openSet nms = do
+  env <- get
+  let gammaMap = env ^. gamma
+      wrappedOpen nms key (TF f) = if key `elem` nms 
+                                   then Just . TF . open $ f
+                                   else Just . TF $ f
+      wrappedOpen nms key t = Just t
+      openedStack = fmap (mapMaybeWithKey (wrappedOpen nms)) gammaMap
+  put $ Env openedStack (env ^. pi) (env ^. counter) (env ^. assumpt)  

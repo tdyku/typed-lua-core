@@ -6,26 +6,12 @@ import Control.Lens
 import Data.Map                 (lookup, Map, mapMaybeWithKey)
 import Prelude                  hiding (pi, lookup)
 import Data.Maybe               (fromJust)
+import Data.List                (nub)
 
 import Typechecker.Subtype      ((<?))
 import Typechecker.Utils        (anyT, allT)
 import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..), TType(..), V(..))
 import AST                      (LHVal(..), Stm(..), Expr(..), Block(..), ExprList(..))
-
-
-closeSet :: [String] -> Map String T -> Map String T
-closeSet nms gamma = let wrappedClose nms key (TF f) = if key `elem` nms 
-                                                       then Just . TF . close $ f
-                                                       else Just . TF $ f
-                         wrappedClose nms key t = Just t
-                     in mapMaybeWithKey (wrappedClose nms) gamma
-
-openSet :: [String] -> Map String T -> Map String T
-openSet nms gamma = let wrappedClose nms key (TF f) = if key `elem` nms 
-                                                       then Just . TF . open $ f
-                                                       else Just . TF $ f
-                        wrappedClose nms key t = Just t
-                    in mapMaybeWithKey (wrappedClose nms) gamma
 
 
 
@@ -187,3 +173,13 @@ fopt s@(SP _) discF i = let projRes = fot (proj s i) discF
                         in if projRes == RVoid then SUnion [] else s 
 fopt s@(SUnion ps) discF i = let fP = filter (\x -> (fot (proj (SP x) i) discF) /= RVoid ) ps
                              in SUnion fP
+
+
+filterFun :: F -> F -> F
+filterFun (FUnion fs) f = let unique = reverse . nub . reverse
+                              filtered = filter (/= f) fs
+                              result = unique $ fmap (\x -> filterFun x f) filtered 
+                          in if (length result) == 1 
+                             then head result
+                             else FUnion result
+filterFun f1 f2 = f1
