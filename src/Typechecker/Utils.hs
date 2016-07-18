@@ -80,6 +80,17 @@ newGammaScope = do
     put $ Env (mempty : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
 
 
+getGamma :: TypeState (Map Name T)
+getGamma = do
+    env <- get
+    return $ env ^. gamma ^?! _head
+
+
+insertGamma :: Map Name T -> TypeState ()
+insertGamma gm = do
+    env <- get
+    put $ Env (gm : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
+
 newPiScope :: TypeState ()
 newPiScope = do
     env <- get

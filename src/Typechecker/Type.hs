@@ -14,7 +14,7 @@ import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..),
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?))
 import Typechecker.Utils
-import Typechecker.AuxFuns (infer, fit, fot, proj, fopt, fipt, wf, rconst, isConst, vt, open, reopen, close, fix, tag)
+import Typechecker.AuxFuns
 import Text.Show.Pretty (ppShow)
 
     
@@ -244,10 +244,33 @@ tReturn :: Stm -> TypeState ()
 tReturn (StmReturn explist) = return () -- we typecheck returns in function body 
 
 tWhile :: Stm -> TypeState ()
-tWhile (StmWhile e blk) = do
-  getTypeExp e
+tWhile w@(StmWhile e@(ExpVar id) blk@(Block stms)) = do
+  tf <- getTypeExp e
+  insertToGamma id tf
+  gamma <- getGamma 
+  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+      openedGamma = openSet (frv [] w) gamma 
+      closedGamma = closeSet (filteredFav $ fav [] w) openedGamma
+  insertGamma closedGamma
   tBlock blk
+  popGammaScope
 
+
+tWhile w@(StmWhile e blk@(Block stms)) = do
+  getTypeExp e
+  gamma <- getGamma 
+  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+      closedGamma = closeSet (filteredFav $ fav [] w) gamma
+      openedGamma = openSet (frv [] w) closedGamma 
+  insertGamma openedGamma
+  tBlock blk
+  popGammaScope
+
+
+isIdVal (IdVal _) = True
+isIdVal _ = False
+
+getIdVal (IdVal id) = id
 
 -- T-SKIP
 tSkip :: Stm -> TypeState ()

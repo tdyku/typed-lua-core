@@ -3,7 +3,7 @@ module Typechecker.AuxFuns where
 import Control.Monad.State      (State, StateT, liftIO, get, put, evalStateT)
 import Control.Monad.Except     (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Data.Map                 (lookup)
+import Data.Map                 (lookup, Map, mapMaybeWithKey)
 import Prelude                  hiding (pi, lookup)
 import Data.Maybe               (fromJust)
 
@@ -11,6 +11,22 @@ import Typechecker.Subtype      ((<?))
 import Typechecker.Utils        (anyT, allT)
 import Types                    (F(..), L(..), B(..), T(..), R(..), P(..), S(..), E(..), TType(..), V(..))
 import AST                      (LHVal(..), Stm(..), Expr(..), Block(..), ExprList(..))
+
+
+closeSet :: [String] -> Map String T -> Map String T
+closeSet nms gamma = let wrappedClose nms key (TF f) = if key `elem` nms 
+                                                       then Just . TF . close $ f
+                                                       else Just . TF $ f
+                         wrappedClose nms key t = Just t
+                     in mapMaybeWithKey (wrappedClose nms) gamma
+
+openSet :: [String] -> Map String T -> Map String T
+openSet nms gamma = let wrappedClose nms key (TF f) = if key `elem` nms 
+                                                       then Just . TF . open $ f
+                                                       else Just . TF $ f
+                        wrappedClose nms key t = Just t
+                    in mapMaybeWithKey (wrappedClose nms) gamma
+
 
 
 -- catches everything from left side
@@ -31,7 +47,7 @@ frv elems (StmWhile _ (Block stms)) = elems ++ (concat $ fmap (frv []) stms)
 frv elems (StmIf _ (Block b1) (Block b2)) = elems ++ (concat $ fmap (frv []) b1) ++ (concat $ fmap (frv []) b2)                   
 frv elems (StmTypedVarDecl _ (ExprList ex1 _) (Block b1)) = elems ++ (fmap getId $ filter isVar ex1) ++ (concat $ fmap (frv []) b1) 
 frv elems (StmVarDecl _ (ExprList ex1 _) (Block b1)) = elems ++ (fmap getId $ filter isVar ex1) ++ (concat $ fmap (frv []) b1)           
-frv elems (StmRecDecl _ (ExprList ex1 _) (Block b1)) = elems ++ [IdVal id] ++  (concat $ fmap (fav []) b1)              
+frv elems (StmRecDecl _ ex1 (Block b1)) = elems ++ (fmap getId $ filter isVar [ex1]) ++  (concat $ fmap (frv []) b1)              
 frv elems _ = elems      
 
 isVar :: Expr -> Bool
