@@ -38,12 +38,12 @@ tMethod m@(StmMthdDecl tabId _ _ _ _) = do
   f <- tSimpleLookup tabId
   case tableType f of
     Unique -> tMethodUnique m
-    Open -> error "Open!!!!!!!!!!!!"
+    Open -> tMethodOpen m
     Closed -> throwError "Methods can be defined only in Open and Unique tables"
 
 
 tMethodUnique :: Stm -> TypeState ()
-tMethodUnique m@(StmMthdDecl tabId funId (ParamList tIds _) retType stms) = do
+tMethodUnique m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   t@(FTable tls ttp) <- tSimpleLookup tabId
   if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
   then do 
@@ -52,15 +52,36 @@ tMethodUnique m@(StmMthdDecl tabId funId (ParamList tIds _) retType stms) = do
     newGammaScope
     insertToGamma "self" (TF t)
     mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+    case mArgs of
+      Just f -> insertToGamma "..." (TF f)
     tBlock stms
     popGammaScope
-    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) (Just FNil)) retType
+    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
     insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
     openSet (frv [] m)
     closeSet (filteredFav $ fav [] m)
-  
   else throwError $ "Method " ++ funId ++ " overrides key!\n" 
 
+
+tMethodOpen :: Stm -> TypeState ()
+tMethodOpen m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
+  t@(FTable tls ttp) <- tSimpleLookup tabId
+  if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
+  then do 
+    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+    closeAll
+    newGammaScope
+    insertToGamma "self" (TF t)
+    mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+    case mArgs of
+      Just f -> insertToGamma "..." (TF f)
+    tBlock stms
+    popGammaScope
+    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
+    insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
+    openSet (frv [] m)
+    closeSet (filteredFav $ fav [] m)
+  else throwError $ "Method " ++ funId ++ " overrides key!\n" 
 
 
 
