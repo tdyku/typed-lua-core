@@ -31,6 +31,39 @@ tStmt a@(StmAssign _ _)         = tAssignment a
 tStmt i@(StmIf _ _ _)           = tIF i
 tStmt w@(StmWhile _ _)          = tWhile w
 tStmt r@(StmReturn _)           = tReturn r
+tStmt m@(StmMthdDecl _ _ _ _ _) = tMethod m
+
+tMethod :: Stm -> TypeState ()
+tMethod m@(StmMthdDecl tabId _ _ _ _) = do
+  f <- tSimpleLookup tabId
+  case tableType f of
+    Unique -> tMethodUnique m
+    Open -> error "Open!!!!!!!!!!!!"
+    Closed -> throwError "Methods can be defined only in Open and Unique tables"
+
+
+tMethodUnique :: Stm -> TypeState ()
+tMethodUnique m@(StmMthdDecl tabId funId (ParamList tIds _) retType stms) = do
+  t@(FTable tls ttp) <- tSimpleLookup tabId
+  if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
+  then do 
+    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+    closeAll
+    newGammaScope
+    insertToGamma "self" (TF t)
+    mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+    tBlock stms
+    popGammaScope
+    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) (Just FNil)) retType
+    insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
+    openSet (frv [] m)
+    closeSet (filteredFav $ fav [] m)
+  
+  else throwError $ "Method " ++ funId ++ " overrides key!\n" 
+
+
+
+
 
 -- T-LOCAL1
 tLocal1 :: Stm -> TypeState ()
@@ -149,6 +182,13 @@ readExp _ (TFilter _ f2) = return $ TF f2
 readExp _ (TProj x1 i1) = do
   sX <- lookupPI x1
   return . TF $ proj sX i1
+
+
+tSimpleLookup :: String -> TypeState F
+tSimpleLookup id = do
+  TF f <- lookupGamma id
+  return f
+
 
 tIF :: Stm -> TypeState ()
 tIF (StmIf cond tBlk eBlk) =
@@ -277,6 +317,7 @@ getIdVal (IdVal id) = id
 tSkip :: Stm -> TypeState ()
 tSkip _ = return ()
 
+
 -- T-ASSIGNMENT1
 tAssignment :: Stm -> TypeState ()
 tAssignment (StmAssign vars exps) = do
@@ -287,6 +328,14 @@ tAssignment (StmAssign vars exps) = do
     then return ()
     else throwError $ "False in tAssignment" ++ show s1 ++ show s2
 
+
+--tLocal2 :: Stm -> TypeState ()
+--tLocal2 (StmVarDecl ids exprList (Block blck)) = do
+--    etype <- tExpList exprList
+--    mapM_ (registerVar etype) (zip ids [0..])
+--    mapM_ tStmt blck
+--    where registerVar :: E -> (String, Int) -> TypeState ()
+--          registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
 getTypeExp :: Expr -> TypeState T
 getTypeExp = \case

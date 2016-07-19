@@ -181,7 +181,7 @@ pExprList = choice [try singleMe, fullExprList]
 
 
 pA, pFunApp, pMthdApp :: Parser A.Appl
-pA = choice [pFunApp, pMthdApp, pVarArg]
+pA = choice [try pFunApp, pMthdApp, pVarArg]
 pFunApp = A.FunAppl <$> pExpr <*> between (symbol '(') (symbol ')') pExprList
 pMthdApp = A.MthdAppl <$> pExpr <* symbol ':' <*> idVar <*> between (symbol '(') (symbol ')') pExprList
 pVarArg = keyword "..." *> pure A.VarArg

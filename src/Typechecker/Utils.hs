@@ -5,7 +5,7 @@ module Typechecker.Utils where
 import Control.Monad.State   (State, StateT, liftIO, get, put, evalStateT)
 import Control.Monad.Except  (ExceptT, throwError, runExceptT)
 import Control.Lens
-import Types                 (F(..), T(..), P(..), S(..), E(..))
+import Types                 (F(..), T(..), P(..), S(..), E(..), TType)
 import Data.Map
 import Prelude               hiding (pi, lookup)
 import Data.Maybe            (fromMaybe, isNothing)
@@ -172,3 +172,5 @@ s2f (SUnion ps) =
     in  (merge 0 mLen [] extended, sVarargs)
 
 
+tableType :: F -> TType
+tableType (FTable _ tp) = tp
