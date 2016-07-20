@@ -15,7 +15,7 @@ import Data.Maybe               (isJust, fromJust)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
-import Typechecker.Subtype ((<?))
+import Typechecker.Subtype ((<?), uSub)
 import Typechecker.Utils
 import Typechecker.AuxFuns
 import Text.Show.Pretty (ppShow)
@@ -47,23 +47,24 @@ tMethod m@(StmMthdDecl tabId _ _ _ _) = do
 tMethodUO :: Stm -> TypeState ()
 tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   t@(FTable tls ttp) <- tSimpleLookup tabId
-  if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
-  then do 
-    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
-    closeAll
-    newScopes
-    insertSToPi (-1) retType
-    insertToGamma "self" (TF t)
-    mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
-    when (isJust mArgs) (insertToGamma "..." (TF . fromJust $ mArgs)) 
-    tBlock stms
-    popScopes
-    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
-    insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
-    openSet (frv [] m)
-    closeSet (filteredFav $ fav [] m)
-  else throwError $ "Method " ++ funId ++ " overrides key!\n" 
-
+  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+  closeAll
+  newScopes
+  insertSToPi (-1) retType
+  insertToGamma "self" (TF t)
+  mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+  when (isJust mArgs) (insertToGamma "..." (TF . fromJust $ mArgs)) 
+  tBlock stms
+  popScopes
+  let fun = VConst $ FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
+      funNameLit = FL $ LString funId
+  if all (==False) $ fmap (funNameLit <?) (fst <$> tls)
+  then insertToGamma tabId (TF $ FTable (tls ++ [(funNameLit, fun)]) ttp)
+  else if anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit {-&& fun `uSub` v-})) tls 
+       then return ()
+       else throwError $ "Method " ++ funId ++ " overrides key, but not value\n"
+  openSet (frv [] m)
+  closeSet (filteredFav $ fav [] m)
 
 
 
