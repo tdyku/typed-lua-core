@@ -60,7 +60,7 @@ tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
       funNameLit = FL $ LString funId
   if all (==False) $ fmap (funNameLit <?) (fst <$> tls)
   then insertToGamma tabId (TF $ FTable (tls ++ [(funNameLit, fun)]) ttp)
-  else if anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit {-&& fun `uSub` v-})) tls 
+  else if anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit && (rconst fun) <? (rconst v))) tls 
        then return ()
        else throwError $ "Method " ++ funId ++ " overrides key, but not value\n"
   openSet (frv [] m)
