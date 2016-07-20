@@ -23,7 +23,7 @@ type Name = String
 
 data Env = Env {
     _gamma   :: [Map Name T],
-    _pi      :: [Map Int  S],
+    _pi      :: [Map Int  S],   -- rho will have value -1
     _counter :: Int,
     _assumpt :: [(F, F)]
 }
@@ -49,8 +49,8 @@ lookupGamma var = do
                                 Nothing -> lookfor var ms
         lookfor var [] = throwError $  "Cannot find " ++ var ++ " in gamma."
 
-lookupPI :: Int -> TypeState S
-lookupPI x = do
+lookupPi :: Int -> TypeState S
+lookupPi x = do
     env <- get 
     lookfor x (env ^. pi)
     where lookfor :: Int -> [Map Int S] -> TypeState S
@@ -135,7 +135,7 @@ e2s (E ts mb) = do
           unwrap (TF f) = return f
           unwrap (TFilter _ f) = return f
           unwrap (TProj x i) = do
-            piProj <- lookupPI x
+            piProj <- lookupPi x
             return $ case piProj of
                 SP p@(P fs mf) -> unwrapP i p
                 SUnion ps -> FUnion $ fmap (unwrapP i) ps

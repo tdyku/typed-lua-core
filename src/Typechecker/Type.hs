@@ -10,6 +10,8 @@ import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 import Prelude                  hiding (pi)
+import Control.Monad            (when)
+import Data.Maybe               (isJust, fromJust)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
@@ -37,51 +39,31 @@ tMethod :: Stm -> TypeState ()
 tMethod m@(StmMthdDecl tabId _ _ _ _) = do
   f <- tSimpleLookup tabId
   case tableType f of
-    Unique -> tMethodUnique m
-    Open -> tMethodOpen m
+    Unique -> tMethodUO m
+    Open -> tMethodUO m
     Closed -> throwError "Methods can be defined only in Open and Unique tables"
 
 
-tMethodUnique :: Stm -> TypeState ()
-tMethodUnique m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
+tMethodUO :: Stm -> TypeState ()
+tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   t@(FTable tls ttp) <- tSimpleLookup tabId
   if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
   then do 
     let filteredFav nms = fmap getIdVal $ filter isIdVal nms
     closeAll
-    newGammaScope
+    newScopes
+    insertSToPi (-1) retType
     insertToGamma "self" (TF t)
     mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
-    case mArgs of
-      Just f -> insertToGamma "..." (TF f)
+    when (isJust mArgs) (insertToGamma "..." (TF . fromJust $ mArgs)) 
     tBlock stms
-    popGammaScope
+    popScopes
     let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
     insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
     openSet (frv [] m)
     closeSet (filteredFav $ fav [] m)
   else throwError $ "Method " ++ funId ++ " overrides key!\n" 
 
-
-tMethodOpen :: Stm -> TypeState ()
-tMethodOpen m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
-  t@(FTable tls ttp) <- tSimpleLookup tabId
-  if all (==False) $ fmap ((FL (LString tabId)) <?) (fst <$> tls)
-  then do 
-    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
-    closeAll
-    newGammaScope
-    insertToGamma "self" (TF t)
-    mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
-    case mArgs of
-      Just f -> insertToGamma "..." (TF f)
-    tBlock stms
-    popGammaScope
-    let fun = FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
-    insertToGamma tabId (TF $ FTable (tls ++ [(FL $ LString tabId,VConst fun)]) ttp)
-    openSet (frv [] m)
-    closeSet (filteredFav $ fav [] m)
-  else throwError $ "Method " ++ funId ++ " overrides key!\n" 
 
 
 
@@ -201,7 +183,7 @@ readExp nm (TF f) = TF <$>  processF nm f
 
 readExp _ (TFilter _ f2) = return $ TF f2
 readExp _ (TProj x1 i1) = do
-  sX <- lookupPI x1
+  sX <- lookupPi x1
   return . TF $ proj sX i1
 
 
@@ -234,7 +216,7 @@ tIF (StmIf cond tBlk eBlk) =
           else return ()
                   
         TProj x i -> do
-          sX <- lookupPI x
+          sX <- lookupPi x
           if (fit (proj sX i) FNil) == RVoid
           then (do
             newPiScope
@@ -303,7 +285,12 @@ tIF (StmIf cond tBlk eBlk) =
           mapM_ tStmt eBlk              
 
 tReturn :: Stm -> TypeState ()
-tReturn (StmReturn explist) = return () -- we typecheck returns in function body 
+tReturn (StmReturn explist) = do
+  retTypeS <- (tExpList explist) >>= e2s
+  scopeTypeS <- lookupPi (-1)
+  when (not $ retTypeS <? scopeTypeS) (throwError $ "Returning wrong type. Should be: " ++ show scopeTypeS) 
+
+
 
 
 tWhile :: Stm -> TypeState ()
@@ -349,14 +336,6 @@ tAssignment (StmAssign vars exps) = do
     then return ()
     else throwError $ "False in tAssignment" ++ show s1 ++ show s2
 
-
---tLocal2 :: Stm -> TypeState ()
---tLocal2 (StmVarDecl ids exprList (Block blck)) = do
---    etype <- tExpList exprList
---    mapM_ (registerVar etype) (zip ids [0..])
---    mapM_ tStmt blck
---    where registerVar :: E -> (String, Int) -> TypeState ()
---          registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
 getTypeExp :: Expr -> TypeState T
 getTypeExp = \case
@@ -449,9 +428,11 @@ tConstr es mApp = do
 tFun :: Expr -> TypeState F
 tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
     newScopes
+    insertSToPi (-1) s
     let filteredFav nms = fmap getIdVal $ filter isIdVal nms
     let argType = SP $ P (fmap snd tIds) mf
     mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
+    when (isJust mf) (insertToGamma "..." (TF . fromJust $ mf)) 
     closeAll
     tBlock blk
     openSet (concat $ fmap (frv []) b)
