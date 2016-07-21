@@ -34,6 +34,16 @@ tStmt i@(StmIf _ _ _)           = tIF i
 tStmt w@(StmWhile _ _)          = tWhile w
 tStmt r@(StmReturn _)           = tReturn r
 tStmt m@(StmMthdDecl _ _ _ _ _) = tMethod m
+tStmt r@(StmRecDecl _ _ _)      = tRec r
+
+
+tRec :: Stm -> TypeState ()
+tRec (StmRecDecl (id, f) e block) = do
+  TF expF <- getTypeExp e    
+  if expF <? f 
+  then throwError "Typechecks"
+  else throwError "Do not typechecks"
+
 
 tMethod :: Stm -> TypeState ()
 tMethod m@(StmMthdDecl tabId _ _ _ _) = do
