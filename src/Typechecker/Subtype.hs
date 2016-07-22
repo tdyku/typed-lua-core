@@ -109,8 +109,8 @@ instance Subtype P where
 
 
 tupleZip ls l rs r | length ls == length rs = zip ls rs
-                   | length ls < length rs = zip (ls ++ repeat (fromMaybe FNil l)) rs
-                   | otherwise = zip ls (rs ++ repeat (fromMaybe FNil r))
+                   | length ls < length rs = zip (ls ++ repeat (maybe FNil (\x -> FUnion [x, FNil]) l)) rs
+                   | otherwise = zip ls (rs ++ repeat (maybe FNil (\x -> FUnion [x, FNil]) r))
 
 
 instance Subtype T where
@@ -124,8 +124,8 @@ instance Subtype E where
 
 
 tupleZipE ls l rs r | length ls == length rs = zip ls rs
-                    | length ls < length rs = zip (ls ++ repeat (fromMaybe (TF FNil) l)) rs
-                    | otherwise = zip ls (rs ++ repeat (fromMaybe (TF FNil) r))
+                    | length ls < length rs = zip (ls ++ repeat (maybe (TF FNil) (\(TF x) -> TF $ FUnion [x, FNil]) l)) rs
+                    | otherwise = zip ls (rs ++ repeat (maybe (TF FNil) (\(TF x) -> TF $ FUnion [x, FNil]) r))
 
 
 -- subtyping for V

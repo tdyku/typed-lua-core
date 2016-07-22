@@ -2,7 +2,7 @@
 module Parser.Code where
 
 import           Text.Parser.Char                         (letter, space, lower, alphaNum, string, digit, char, oneOf, spaces)
-import           Text.Parser.Combinators                  (choice, between, sepBy, sepBy1)
+import           Text.Parser.Combinators                  (choice, between, sepBy, sepEndBy, sepBy1)
 import           Text.Parser.Combinators                  (some, many, option, optional, eof, notFollowedBy, chainl1, chainr1)
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parser.Combinators                  (try, (<?>))
@@ -174,7 +174,7 @@ pExprList :: Parser A.ExprList
 pExprList = choice [try singleMe, fullExprList]
     where singleMe = A.ExprList [] <$> optional pA
           fullExprList = do
-            exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) ) -- <:> option [] ((comma *> pME) <:> (return []))
+            exprs <- (pExpr <:> many (try (comma *> pExpr <* notFollowedBy (symbol '('))) )
             me <- optional (comma *> pA)
             return $ A.ExprList exprs me
 
@@ -187,4 +187,4 @@ pMthdApp = A.MthdAppl <$> pExpr <* symbol ':' <*> idVar <*> between (symbol '(')
 pVarArg = keyword "..." *> pure A.VarArg
 
 pPL :: Parser A.ParamList
-pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepBy` comma <*> optionMaybe (keyword "..." *> symbol ':' *> pF)
+pPL = A.ParamList <$> ((,) <$> idVar <* symbol ':' <*> pF) `sepEndBy` comma <*> optionMaybe (keyword "..." *> symbol ':' *> pF)
