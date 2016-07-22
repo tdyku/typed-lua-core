@@ -41,8 +41,12 @@ tRec :: Stm -> TypeState ()
 tRec (StmRecDecl (id, f) e block) = do
   TF expF <- getTypeExp e    
   if expF <? f 
-  then throwError "Typechecks"
-  else throwError "Do not typechecks"
+  then do 
+    newGammaScope
+    insertToGamma id (TF f)
+    tBlock block
+    popGammaScope 
+  else throwError $ show expF ++ " is not subtype of " ++ show f
 
 
 tMethod :: Stm -> TypeState ()
