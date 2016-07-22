@@ -28,8 +28,10 @@ instance Subtype F where
     isSub amp (FFunction s1 s2  ) (FFunction s3 s4  )  = isSub amp s3 s1 && isSub amp s2 s4                                              
     isSub amp (FUnion fs        )  x                   = allT $ fmap (\y -> isSub amp y x) fs
     isSub amp  x                  (FUnion fs        )  = anyT $ fmap (isSub amp x) fs
-    isSub amp (FVariable x1     ) (FVariable x2     )  = error "Assumption rule" -- if in state then True else False
-    isSub amp (FRecursive x1 f1 ) (FRecursive x2 f2 )  = error "Amber rule" -- addToState (x1, x2), f1 <? f2
+    isSub amp (FVariable x1     ) (FVariable x2     )  = (x1,x2) `elem` amp
+    isSub amp (FRecursive x1 f1 ) (FRecursive x2 f2 )  = isSub ((x1,x2):amp) f1 f2
+    isSub amp  f                  (FRecursive x1 f1 )  = isSub amp f (recFold x1 f1)
+    isSub amp (FRecursive x1 f1 )  f                   = isSub amp (recFold x1 f1) f
     isSub amp t1@(FTable ts1 tt1) t2@(FTable ts2 tt2)  | tt1 == Unique && tt2 == Closed = sTable2 amp t1 t2
                                                        | tt1 `elem` [Fixed, Closed] && tt2 == Closed = sTable1 amp t1 t2 
                                                        | tt1 == Unique && tt2 `elem` [Unique, Open, Fixed] = sTable3 amp t1 t2
@@ -38,6 +40,12 @@ instance Subtype F where
                                                        | tt1 == Fixed && tt2 == Fixed = sTable6 amp t1 t2
     isSub amp  x                   y                   = x == y
 
+
+recFold :: String -> F -> F
+recFold x f@(FTable tts tp) = FTable (fmap (applyRec x f) tts) tp
+    where applyRec x f (key, VConst val) = if val == FVariable x then (key, VConst $ FRecursive x f) else (key, VConst val)
+          applyRec x f (key, VF val) = if val == FVariable x then (key, VF $ FRecursive x f) else (key, VF val) 
+recFold _ f = f
 
 sTable1, sTable2, sTable3, sTable4, sTable5, sTable6 :: [(String, String)] -> F -> F -> Bool
 sTable1 amp (FTable lefts tt1) (FTable rights tt2) =

@@ -44,3 +44,9 @@ local tab:{"a":(number) -> (number)}_unique = { ["a"] = fun(x:number):(number) r
 --7. Basic recursion
 rec a : ux.{"next":(x|nil)} = {["next"]=nil} in
     skip
+
+
+--8. Refinement 
+local person = {} in
+    person["firstname"] <string> = "Lou";
+    person["lastname"] <string> = "Reed" 
