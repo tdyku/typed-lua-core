@@ -10,7 +10,7 @@ import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 import Prelude                  hiding (pi)
-import Control.Monad            (when)
+import Control.Monad            (when, void)
 import Data.Maybe               (isJust, fromJust)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
@@ -35,7 +35,11 @@ tStmt w@(StmWhile _ _)          = tWhile w
 tStmt r@(StmReturn _)           = tReturn r
 tStmt m@(StmMthdDecl _ _ _ _ _) = tMethod m
 tStmt r@(StmRecDecl _ _ _)      = tRec r
+tStmt v@(StmVoidAppl _)        = tVoidApply v
 
+
+tVoidApply :: Stm -> TypeState ()
+tVoidApply (StmVoidAppl f) = void $ tApply f
 
 tRec :: Stm -> TypeState ()
 tRec (StmRecDecl (id, f) e block) = do
@@ -120,6 +124,22 @@ tApply (FunAppl e eList) = do
       TF FAny -> return . SP . (P []) . Just $ FAny  
       _ -> throwError "Expression is not a function in tApply."
 
+
+tApply (MthdAppl tab funName eList) = do
+  funType <- tIndexRead (ExpTableAccess tab (ExpString funName)) 
+  tArgs <- tExpList eList
+  case funType of
+    FFunction s1 s2 -> do
+        let e1 = sp2e s1
+        if tArgs <? e1
+        then return s2
+        else throwError "Given args does not match method." 
+    FAny -> return . SP . (P []) . Just $ FAny  
+    _    -> throwError $ "Table " ++ show tab ++ "does not contain method " ++ funName
+
+tApply VarArg = do
+  TF v <- lookupGamma "..."
+  return . SP . (P []) . Just $ v
 
 -- T-LHSLIST
 tLHSList :: [LHVal] -> TypeState S
