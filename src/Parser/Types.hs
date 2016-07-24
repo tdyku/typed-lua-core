@@ -1,13 +1,13 @@
 module Parser.Types where
 
 import           Text.Parser.Char                         (alphaNum, digit, char, spaces)
-import           Text.Parser.Combinators                  (choice, between, sepBy, option, many, many)
+import           Text.Parser.Combinators                  (choice, between, sepBy, option, many, many, notFollowedBy, sepEndBy)
 import           Text.Trifecta.Parser                     (Parser)
 import           Control.Applicative                      ((<*>), (*>), pure)
 import           Text.Parser.Combinators                  (try, (<?>), sepBy1)
 
 
-import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon, many1)
+import           Parser.Utils                             (keyword, symbol, (<++>), (<:>), comma, idVar, semicolon, many1, optionMaybe)
 import qualified AST               as A
 import qualified Types             as T
 
@@ -41,7 +41,13 @@ pS = choice [try (T.SP <$> pP), T.SUnion <$> between (symbol '(') (symbol ')') (
 
 -- P type
 pP :: Parser T.P
-pP = T.P <$> between (symbol '(') (symbol ')') (pF `sepBy` comma) <*> pure Nothing
+pP = between (symbol '(') (symbol ')') pPL
+    where pPL :: Parser T.P
+          pPL = do
+            args <- (try (pF <* notFollowedBy (symbol '*'))) `sepEndBy` comma
+            mApp <- optionMaybe (pF <* symbol '*')
+            return $ T.P args mApp
+
 
 -- F types
 pF, pFL, pFB, pFNil, pFValue, pFAny, pFSelf, pFUnion, pFFunction, pFTable, pFVariable, pFRecursive :: Parser T.F
