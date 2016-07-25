@@ -212,8 +212,10 @@ ps2Projections tExps ps = do
 readExp :: String -> T -> TypeState T
 readExp nm (TF f) = TF <$>  processF nm f
   where processF :: String -> F -> TypeState F
-        processF var t@(FTable ts Unique) = insertToGamma var (TF . open $ t) >> (return . close $ t) 
-        --processF var t@(FTable ts *?*) = insertToGamma var (TF . fix $ t) >> (return . fix $ t) 
+        processF var t@(FTable ts Unique) = do
+          isInRetrun <- getRetCounter
+          let tabMod = if isInRetrun == 0 then close else fix
+          insertToGamma var (TF . open $ t) >> (return . tabMod $ t)
         processF _ f = return f
 
 readExp _ (TFilter _ f2) = return $ TF f2
@@ -321,7 +323,9 @@ tIF (StmIf cond tBlk eBlk) =
 
 tReturn :: Stm -> TypeState ()
 tReturn (StmReturn explist) = do
+  incRetCounter
   retTypeS <- (tExpList explist) >>= e2s
+  decRetCounter
   scopeTypeS <- lookupPi (-1)
   when (not $ retTypeS <? scopeTypeS) (throwError $ "Returning wrong type. Should be: " ++ show scopeTypeS) 
 
@@ -621,7 +625,7 @@ closeAll = do
       wrappedClose (TF f) = TF $ close f
       wrappedClose x = x
       gammaStack = fmap closeEnv (env ^. gamma)
-  put $ Env gammaStack (env ^. pi) (env ^. counter) (env ^. assumpt)  
+  put $ Env gammaStack (env ^. pi) (env ^. counter) (env ^. insideRet)  
 
 
 closeSet :: [String] -> TypeState ()
@@ -633,7 +637,7 @@ closeSet nms = do
                                     else Just . TF $ f
       wrappedClose nms key t = Just t
       closedStack = fmap (mapMaybeWithKey (wrappedClose nms)) gammaMap
-  put $ Env closedStack (env ^. pi) (env ^. counter) (env ^. assumpt)   
+  put $ Env closedStack (env ^. pi) (env ^. counter) (env ^. insideRet)   
 
 openSet :: [String] -> TypeState ()
 openSet nms = do
@@ -644,4 +648,4 @@ openSet nms = do
                                    else Just . TF $ f
       wrappedOpen nms key t = Just t
       openedStack = fmap (mapMaybeWithKey (wrappedOpen nms)) gammaMap
-  put $ Env openedStack (env ^. pi) (env ^. counter) (env ^. assumpt)  
+  put $ Env openedStack (env ^. pi) (env ^. counter) (env ^. insideRet)  

@@ -22,22 +22,41 @@ type Name = String
 
 
 data Env = Env {
-    _gamma   :: [Map Name T],
-    _pi      :: [Map Int  S],   -- rho will have value -1
-    _counter :: Int,
-    _assumpt :: [(F, F)]
+    _gamma     :: [Map Name T],
+    _pi        :: [Map Int  S],   -- rho will have value -1
+    _counter   :: Int,
+    _insideRet :: Int
 }
 makeLenses ''Env
 
 type TypeState a = ExceptT String (StateT Env IO) a
 
-runTypechecker y p = evalStateT (runExceptT $ p y) (Env [empty] [empty] 0 []) 
+runTypechecker y p = evalStateT (runExceptT $ p y) (Env [empty] [empty] 0 0) 
 
 tic :: TypeState Int
 tic = do
     env <- get
-    put $ Env (env ^. gamma) (env ^. pi) (env ^. counter + 1) (env ^. assumpt)
+    put $ Env (env ^. gamma) (env ^. pi) (env ^. counter + 1) (env ^. insideRet)
     return $ env ^. counter
+
+
+incRetCounter :: TypeState ()
+incRetCounter = do
+    env <- get 
+    put $ Env  (env ^. gamma) (env ^. pi) (env ^. counter) (env ^. insideRet + 1)
+
+
+decRetCounter :: TypeState ()
+decRetCounter = do
+    env <- get 
+    put $ Env  (env ^. gamma) (env ^. pi) (env ^. counter) (env ^. insideRet - 1)
+
+
+getRetCounter :: TypeState Int
+getRetCounter = do
+    env <- get
+    return $ env ^. insideRet
+
 
 lookupGamma :: String -> TypeState T
 lookupGamma var = do
@@ -64,7 +83,7 @@ insertSToPi i s = do
     env <- get
     let (piMap:piMaps) = env ^. pi
         newPI = insert i s piMap
-    put $ Env (env ^. gamma) (newPI:piMaps) (env ^. counter) (env ^. assumpt)
+    put $ Env (env ^. gamma) (newPI:piMaps) (env ^. counter) (env ^. insideRet)
 
 insertToGamma :: String -> T -> TypeState ()
 insertToGamma id tp = do
@@ -72,12 +91,12 @@ insertToGamma id tp = do
     let (gMap:gMaps) = env ^. gamma
         newGamma = insert id tp gMap
     --tlog $ "Inserting: " ++ id ++ " of type: " ++ ppShow tp
-    put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (newGamma:gMaps) (env ^. pi) (env ^. counter) (env ^. insideRet)
 
 newGammaScope :: TypeState ()
 newGammaScope = do
     env <- get
-    put $ Env (mempty : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (mempty : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. insideRet)
 
 
 getGamma :: TypeState (Map Name T)
@@ -89,36 +108,36 @@ getGamma = do
 insertGamma :: Map Name T -> TypeState ()
 insertGamma gm = do
     env <- get
-    put $ Env (gm : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (gm : env ^. gamma) (env ^. pi) (env ^. counter) (env ^. insideRet)
 
 newPiScope :: TypeState ()
 newPiScope = do
     env <- get
-    put $ Env (env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. insideRet)
 
 
 newScopes :: TypeState ()
 newScopes = do
     env <- get
-    put $ Env (mempty : env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (mempty : env ^. gamma) (mempty : env ^. pi) (env ^. counter) (env ^. insideRet)
 
 
 popGammaScope :: TypeState ()
 popGammaScope = do
     env <- get
-    put $ Env (tail $ env ^. gamma) (env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (tail $ env ^. gamma) (env ^. pi) (env ^. counter) (env ^. insideRet)
 
 
 popPiScope :: TypeState ()
 popPiScope = do
     env <- get
-    put $ Env (env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. assumpt)
+    put $ Env (env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. insideRet)
 
 
 popScopes :: TypeState ()
 popScopes = do
     env <- get
-    put $ Env (tail $ env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. assumpt)  
+    put $ Env (tail $ env ^. gamma) (tail $ env ^. pi) (env ^. counter) (env ^. insideRet)  
 
 
 tlog :: (Show a) => a -> TypeState ()
