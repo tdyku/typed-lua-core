@@ -18,6 +18,7 @@ library
                  , Typechecker.Utils
                  , Typechecker.Subtype
                  , Typechecker.AuxFuns
+                 , Transform.Globals
   build-depends:       base
                      , parsers
                      , trifecta
