@@ -50,3 +50,8 @@ rec a : ux.{"next":(x|nil)} = {["next"]=nil} in
 local person = {} in
     person["firstname"] <string> = "Lou";
     person["lastname"] <string> = "Reed" 
+
+
+-- 9. Global variables as variables in _ENV table
+local a = 2 in 
+    b = a + 2

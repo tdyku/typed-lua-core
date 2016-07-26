@@ -8,6 +8,7 @@ import           Parser.Code          (pManyStm)
 import           Parser.Types
 import           Typechecker.Utils     (runTypechecker)
 import           Typechecker.Type      (tBlock)
+import           Transform.Globals     (runGlobalTransform)
 
 main :: IO ()
 main = do
@@ -22,9 +23,10 @@ compile fpath = parseFromFile pManyStm fpath
           >>= \case 
               Nothing  -> return ()
               Just res -> do
-                putStrLn . ppShow $ res
-                tres <- runTypechecker res tBlock
-                case tres of
+                transformedRes <- runGlobalTransform res
+                putStrLn . ppShow $ transformedRes
+                checkedRes <- runTypechecker transformedRes tBlock
+                case checkedRes of
                   Right () -> putStrLn "correct!"
                   Left err -> putStrLn err
 
