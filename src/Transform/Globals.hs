@@ -112,7 +112,7 @@ transformExpr ExpTrue = return ExpTrue
 
 transformExpr v@(ExpVar id) = isLocal id >>= \case 
           True -> return v
-          False -> return $ ExpTableAccess (ExpVar "_ENV") (ExpString id)
+          False -> return $ ExpTableAccess (ExpVar "ENV") (ExpString id)
 
 transformExpr (ExpTableAccess tab el) = do
     tab' <- transformExpr tab
@@ -181,4 +181,4 @@ transformLHS lhs = mapM trFun lhs
           trFun (TypeCoercionVal id exp v) = transformExpr exp >>= \x -> return $ TypeCoercionVal id x v
           trFun (IdVal id) = isLocal id >>= \case
             True -> return . IdVal $ id
-            False -> return $ TableVal "_ENV" (ExpString id)
+            False -> return $ TableVal "ENV" (ExpString id)
