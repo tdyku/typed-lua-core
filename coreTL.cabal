@@ -19,6 +19,7 @@ library
                  , Typechecker.Subtype
                  , Typechecker.AuxFuns
                  , Transform.Globals
+                 , Typechecker.Show
   build-depends:       base
                      , parsers
                      , trifecta

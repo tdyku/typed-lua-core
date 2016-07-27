@@ -12,13 +12,14 @@ import Data.List                (transpose)
 import Prelude                  hiding (pi)
 import Control.Monad            (when, void)
 import Data.Maybe               (isJust, fromJust)
+import Text.Show.Pretty (ppShow)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
 import Typechecker.Subtype ((<?), uSub)
 import Typechecker.Utils
 import Typechecker.AuxFuns
-import Text.Show.Pretty (ppShow)
+import Typechecker.Show
 
     
 
@@ -50,7 +51,7 @@ tRec (StmRecDecl (id, f) e block) = do
     insertToGamma id (TF f)
     tBlock block
     popGammaScope 
-  else throwError $ show expF ++ " is not subtype of " ++ show f
+  else throwError $ "In recursive declaration:\n" ++ tShow expF ++ " is not subtype of " ++ tShow f
 
 
 tMethod :: Stm -> TypeState ()
@@ -59,7 +60,8 @@ tMethod m@(StmMthdDecl tabId _ _ _ _) = do
   case tableType f of
     Unique -> tMethodUO m
     Open -> tMethodUO m
-    Closed -> throwError "Methods can be defined only in Open and Unique tables"
+    Closed -> throwError $"In method declaration:\n Methods can be defined only in Open and Unique tables - " ++ tabId ++ " is closed."
+    Fixed -> throwError $ "In method declaration:\n Methods can be defined only in Open and Unique tables - " ++ tabId ++ " is fixed."
 
 
 tMethodUO :: Stm -> TypeState ()
@@ -80,7 +82,7 @@ tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   then insertToGamma tabId (TF $ FTable (tls ++ [(funNameLit, fun)]) ttp)
   else if anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit && (rconst fun) <? (rconst v))) tls 
        then return ()
-       else throwError $ "Method " ++ funId ++ " overrides key, but not value\n"
+       else throwError $ "In method declaration:" ++ funId  ++ " is in table but is not subtype of its value"
   openSet (frv [] m)
   closeSet (filteredFav $ fav [] m)
 
@@ -95,7 +97,7 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     let tvars = fmap snd fvars
         fvarsS = SP $ P tvars (Just FValue)
     case expListS <? fvarsS of
-        False -> throwError $ "tLocal1 error:\n" ++ show fvarsS ++ "\n" ++ show expListS
+        False -> throwError $ "\nIn local declaration:\n" ++ tShow expListS ++ " is not subtype of " ++  tShow fvarsS
         True  -> do
             mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
             mapM_ tStmt blck 
@@ -119,10 +121,10 @@ tApply (FunAppl e eList) = do
         let e1 = sp2e s1
         if tArgs <? e1 
         then return s2
-        else throwError "Given args does not match function."
+        else throwError $ "In function application:\nGiven args: " ++ tShow tArgs ++ "are not subtype of expected: " ++ tShow e1
 
       TF FAny -> return . SP . (P []) . Just $ FAny  
-      _ -> throwError "Expression is not a function in tApply."
+      _ -> throwError $ "In function application:\nExpression " ++ show e ++ " is not a function"
 
 
 tApply (MthdAppl tab funName eList) = do
