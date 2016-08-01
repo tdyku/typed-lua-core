@@ -110,9 +110,12 @@ transformExpr s@(ExpString _) = return s
 transformExpr ExpFalse = return ExpFalse
 transformExpr ExpTrue = return ExpTrue
 
-transformExpr v@(ExpVar id) = isLocal id >>= \case 
+transformExpr v@(ExpVar id) = 
+    isLocal id >>= \case 
           True -> return v
-          False -> return $ ExpTableAccess (ExpVar "ENV") (ExpString id)
+          False -> if id == "setmetatable" 
+                   then return v
+                   else return $ ExpTableAccess (ExpVar "ENV") (ExpString id)
 
 transformExpr (ExpTableAccess tab el) = do
     tab' <- transformExpr tab

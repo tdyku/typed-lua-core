@@ -113,6 +113,9 @@ tLocal2 (StmVarDecl ids exprList (Block blck)) = do
           registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
 tApply :: Appl -> TypeState S
+tApply m@(FunAppl (ExpVar "setmetatable") eList) = do
+  tMetaTable eList
+
 tApply (FunAppl e eList) = do
     funType <- getTypeExp e
     tArgs <- tExpList eList
@@ -142,6 +145,11 @@ tApply (MthdAppl tab funName eList) = do
 tApply VarArg = do
   TF v <- lookupGamma "..."
   return . SP . (P []) . Just $ v
+
+
+tMetaTable :: ExprList -> TypeState S
+tMetaTable eList = do
+    error "I'm here, as I should" 
 
 -- T-LHSLIST
 tLHSList :: [LHVal] -> TypeState S
