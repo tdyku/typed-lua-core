@@ -38,7 +38,7 @@ isLocal :: String -> GlobalTransform Bool
 isLocal nm = do
     scopes <- get
     return $ anyT $ fmap (nm `elem`) (scopes ^. locals)
-    where anyT = any (== True)
+    where anyT = elem True
 
 
 transformBlock :: Block -> GlobalTransform Block
@@ -179,8 +179,8 @@ transformAppl (MthdAppl exp id expList) = do
 
 
 transformLHS :: [LHVal] -> GlobalTransform [LHVal]
-transformLHS lhs = mapM trFun lhs
-    where trFun (TableVal id exp) = transformExpr exp >>= return . (TableVal id)
+transformLHS = mapM trFun
+    where trFun (TableVal id exp) = transformExpr exp >>= return . TableVal id
           trFun (TypeCoercionVal id exp v) = transformExpr exp >>= \x -> return $ TypeCoercionVal id x v
           trFun (IdVal id) = isLocal id >>= \case
             True -> return . IdVal $ id

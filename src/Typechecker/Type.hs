@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 
 module Typechecker.Type where
@@ -10,9 +9,9 @@ import Control.Lens
 import Control.Monad.State      (put, get)
 import Data.List                (transpose)
 import Prelude                  hiding (pi)
-import Control.Monad            (when, void)
+import Control.Monad            (when, void, unless)
 import Data.Maybe               (isJust, fromJust)
-import Text.Show.Pretty (ppShow)
+import Text.Show.Pretty         (ppShow)
 
 import Types (F(..), L(..), B(..), P(..), S(..), TType(..), T(..), E(..), R(..), specialResult, V(..))
 import AST (Expr(..), Stm(..), Block(..), LHVal(..), ExprList(..), AOp(..), ParamList(..), Appl(..), BOp(..), UnOp(..))
@@ -28,15 +27,15 @@ tBlock (Block bs) = mapM_ tStmt bs
 
 tStmt :: Stm -> TypeState ()
 tStmt Skip = tSkip Skip
-tStmt t@(StmTypedVarDecl _ _ _) = tLocal1 t
-tStmt t@(StmVarDecl _ _ _)      = tLocal2 t
-tStmt a@(StmAssign _ _)         = tAssignment a
-tStmt i@(StmIf _ _ _)           = tIF i
-tStmt w@(StmWhile _ _)          = tWhile w
-tStmt r@(StmReturn _)           = tReturn r
-tStmt m@(StmMthdDecl _ _ _ _ _) = tMethod m
-tStmt r@(StmRecDecl _ _ _)      = tRec r
-tStmt v@(StmVoidAppl _)        = tVoidApply v
+tStmt t@StmTypedVarDecl{} = tLocal1 t
+tStmt t@StmVarDecl{}      = tLocal2 t
+tStmt a@StmAssign{}       = tAssignment a
+tStmt i@StmIf{}           = tIF i
+tStmt w@StmWhile{}        = tWhile w
+tStmt r@StmReturn{}       = tReturn r
+tStmt m@StmMthdDecl{}     = tMethod m
+tStmt r@StmRecDecl{}      = tRec r
+tStmt v@StmVoidAppl{}     = tVoidApply v
 
 
 tVoidApply :: Stm -> TypeState ()
@@ -67,7 +66,7 @@ tMethod m@(StmMthdDecl tabId _ _ _ _) = do
 tMethodUO :: Stm -> TypeState ()
 tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   t@(FTable tls ttp) <- tSimpleLookup tabId
-  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+  let filteredFav nms = getIdVal <$> filter isIdVal nms
   closeAll
   newScopes
   insertToGamma tabId (TF FSelf)
@@ -81,9 +80,8 @@ tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
       funNameLit = FL $ LString funId
   if all (==False) $ fmap (funNameLit <?) (fst <$> tls)
   then insertToGamma tabId (TF $ FTable (tls ++ [(funNameLit, fun)]) ttp)
-  else if anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit && (rconst fun) <? (rconst v))) tls 
-       then return ()
-       else throwError $ "In method declaration:" ++ funId  ++ " is in table but is not subtype of its value"
+  else unless (anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit && rconst fun <? rconst v)) tls)
+              (throwError $ "In method declaration:" ++ funId  ++ " is in table but is not subtype of its value")
   openSet (frv [] m)
   closeSet (filteredFav $ fav [] m)
 
@@ -97,11 +95,11 @@ tLocal1 (StmTypedVarDecl fvars exps (Block blck)) = do
     expListS <- e2s e
     let tvars = fmap snd fvars
         fvarsS = SP $ P tvars (Just FValue)
-    case expListS <? fvarsS of
-        False -> throwError $ "\nIn local declaration:\n" ++ tShow expListS ++ " is not subtype of " ++  tShow fvarsS
-        True  -> do
-            mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
-            mapM_ tStmt blck 
+    if expListS <? fvarsS
+    then 
+      do mapM_ (\(k,v) -> insertToGamma k (TF v)) fvars
+         mapM_ tStmt blck 
+    else throwError $ "\nIn local declaration:\n" ++ tShow expListS ++ " is not subtype of " ++  tShow fvarsS
     where insertFun gmap (k,v) = insert k (TF v) gmap        
 
 
@@ -114,7 +112,7 @@ tLocal2 (StmVarDecl ids exprList (Block blck)) = do
           registerVar etype (id, pos) = insertToGamma id (infer etype pos)
 
 tApply :: Appl -> TypeState S
-tApply m@(FunAppl (ExpVar "setmetatable") eList) = do
+tApply m@(FunAppl (ExpVar "setmetatable") eList) =
   tMetaTable eList
 
 tApply (FunAppl e eList) = do
@@ -127,7 +125,7 @@ tApply (FunAppl e eList) = do
         then return s2
         else throwError $ "In function application:\nGiven args: " ++ tShow tArgs ++ "are not subtype of expected: " ++ tShow e1
 
-      TF FAny -> return . SP . (P []) . Just $ FAny  
+      TF FAny -> return . SP . P [] . Just $ FAny  
       _ -> throwError $ "In function application:\nExpression " ++ show e ++ " is not a function"
 
 
@@ -145,7 +143,7 @@ tApply (MthdAppl tab funName eList) = do
 
 tApply VarArg = do
   TF v <- lookupGamma "..."
-  return . SP . (P []) . Just $ v
+  return . SP . P [] . Just $ v
 
 
 tMetaTable :: ExprList -> TypeState S
@@ -177,8 +175,8 @@ tLHSList vars = do
 
 
 getSimpleTypeVar :: LHVal -> TypeState F
-getSimpleTypeVar (IdVal id) = do
-  (lookupGamma id) >>= \case
+getSimpleTypeVar (IdVal id) = 
+  lookupGamma id >>= \case
         (TF f) -> return f
         (TFilter _ f1) -> return f1      
 
@@ -189,11 +187,11 @@ getSimpleTypeVar (TableVal id expr) = do
   where findValue :: F -> F -> TypeState F
         findValue (FTable ts _) f = scanPairs ts f
         findValue FAny _ = return FAny
-        findValue t _ = throwError $ "Left side of accessor should be table."
+        findValue t _ = throwError "Left side of accessor should be table."
         
         scanPairs :: [(F, V)] -> F -> TypeState F
-        scanPairs [] _ = throwError $ "No such field in table!"
-        scanPairs (t:ts) f = if f <? (fst t) && not  (isConst $ snd t) then return . rconst . snd $ t else scanPairs ts f
+        scanPairs [] _ = throwError "No such field in table!"
+        scanPairs (t:ts) f = if f <? fst t && not  (isConst $ snd t) then return . rconst . snd $ t else scanPairs ts f
 
 getSimpleTypeVar (TypeCoercionVal id expr v) = do
   table <- getSimpleTypeVar (IdVal id)
@@ -213,7 +211,7 @@ getSimpleTypeVar (TypeCoercionVal id expr v) = do
 
  --T-EXPLIST
 tExpList :: ExprList -> TypeState E
-tExpList (ExprList exps Nothing) = E <$> (mapM getTypeExp exps) <*> (pure . Just . TF $ FNil)
+tExpList (ExprList exps Nothing) = E <$> mapM getTypeExp exps <*> (pure . Just . TF $ FNil)
 tExpList (ExprList exps (Just me)) = do
     appType <- tApply me
     tExps <- mapM getTypeExp exps
@@ -221,8 +219,7 @@ tExpList (ExprList exps (Just me)) = do
         SP (P fs mf) -> E <$> merge tExps fs <*> mF2mT mf
         SUnion ps -> ps2Projections tExps ps
 
-    where merge tExps fs = do
-            return $ tExps ++ (fmap TF fs)
+    where merge tExps fs = return $ tExps ++ fmap TF fs
           mF2mT maybeF = return $ fmap TF maybeF
 
 ps2Projections :: [T] -> [P] -> TypeState E
@@ -267,29 +264,27 @@ tIF (StmIf cond tBlk eBlk) =
         TF f -> do 
           let ft = fot f FNil
               fe = fit f FNil
-          if ft /= RVoid
-          then do newGammaScope
-                  insertToGamma id (TFilter f (specialResult ft))
-                  tBlock tBlk
-                  popGammaScope
-          else return ()
-          if fe /= RVoid
-          then do newGammaScope
-                  insertToGamma id (TFilter f (specialResult fe))
-                  tBlock eBlk
-                  popGammaScope
-          else return ()
+          when (ft /= RVoid) $
+            do newGammaScope
+               insertToGamma id (TFilter f (specialResult ft))
+               tBlock tBlk
+               popGammaScope
+          when (fe /= RVoid) $ 
+            do newGammaScope
+               insertToGamma id (TFilter f (specialResult fe))
+               tBlock eBlk
+               popGammaScope
                   
         TProj x i -> do
           sX <- lookupPi x
-          if (fit (proj sX i) FNil) == RVoid
+          if fit (proj sX i) FNil == RVoid
           then (do
             newPiScope
             let sT = fopt sX FNil i
             insertSToPi x sT
             tBlock tBlk 
             popPiScope)
-          else if (fot (proj sX i) FNil) == RVoid
+          else if fot (proj sX i) FNil == RVoid
                then (do
                 newPiScope
                 let sE = fipt sX FNil i
@@ -352,12 +347,10 @@ tIF (StmIf cond tBlk eBlk) =
 tReturn :: Stm -> TypeState ()
 tReturn (StmReturn explist) = do
   incRetCounter
-  retTypeS <- (tExpList explist) >>= e2s
+  retTypeS <- tExpList explist >>= e2s
   decRetCounter
   scopeTypeS <- lookupPi (-1)
-  when (not $ retTypeS <? scopeTypeS) (throwError $ "Returning wrong type. Should be: " ++ show scopeTypeS) 
-
-
+  unless (retTypeS <? scopeTypeS) (throwError $ "Returning wrong type. Should be: " ++ show scopeTypeS) 
 
 
 tWhile :: Stm -> TypeState ()
@@ -375,7 +368,7 @@ tWhile w@(StmWhile e@(ExpVar id) blk@(Block stms)) = do
 tWhile w@(StmWhile e blk@(Block stms)) = do
   getTypeExp e
   gamma <- getGamma 
-  let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+  let filteredFav nms = getIdVal <$> filter isIdVal nms
   closeAll
   tBlock blk
   closeSet (filteredFav $ fav [] w)
@@ -399,9 +392,7 @@ tAssignment (StmAssign vars exps) = do
     texps <- tExpList exps
     s1 <- e2s texps
     s2 <- tLHSList vars
-    if s1 <? s2
-    then return ()
-    else throwError $ "False in tAssignment" ++ show s1 ++ show s2
+    unless (s1 <? s2) (throwError $ "False in tAssignment" ++ show s1 ++ show s2)
 
 
 getTypeExp :: Expr -> TypeState T
@@ -412,7 +403,7 @@ getTypeExp = \case
     ExpInt s                     -> return . TF . FL $ LInt s
     ExpFloat s                   -> return . TF . FL $ LFloat s
     ExpString s                  -> return . TF . FL $ LString s
-    c@(ExpTypeCoercion _ _)      -> TF <$> tCoercion c
+    c@ExpTypeCoercion{}         -> TF <$> tCoercion c
     v@(ExpVar var)               -> tLookUpId v 
     e@(ExpABinOp Add _ _)        -> TF <$> tArith e
     e@(ExpABinOp Div _ _)        -> TF <$> tDiv e
@@ -426,9 +417,9 @@ getTypeExp = \case
     e@(ExpBBinOp Or _ _)         -> TF <$> tOr e
     e@(ExpUnaryOp Not _)         -> TF <$> tNot e
     e@(ExpUnaryOp Hash _)        -> TF <$> tLen e
-    f@(ExpFunDecl _ _ _)         -> TF <$> tFun f
+    f@ExpFunDecl{}               -> TF <$> tFun f
     t@(ExpTableConstructor es a) -> TF <$> tConstr es a
-    a@(ExpTableAccess _ _)       -> TF <$> tIndexRead a
+    a@ExpTableAccess{}           -> TF <$> tIndexRead a
 
 
 tCoercion :: Expr -> TypeState F
@@ -436,9 +427,9 @@ tCoercion (ExpTypeCoercion f id) = do
   TF idExp <- getTypeExp (ExpVar id)
   if idExp <? f 
     then if tag Closed f
-           then insertToGamma id (TF . reopen $ f) >> (return f)
+           then insertToGamma id (TF . reopen $ f) >> return f
            else if tag Fixed f
-                  then insertToGamma id (TF f) >> (return f)
+                  then insertToGamma id (TF f) >> return f
                   else throwError $ "Error in coercion: " ++ show id ++ " is neither closed nor fixed"
     else throwError $ "Error in coercion: " ++ show id ++ " is not subtype of: " ++ ppShow f
 
@@ -458,11 +449,11 @@ tIndexRead (ExpTableAccess e1 e2) = do
   where findValue :: F -> F -> TypeState F
         findValue (FTable ts _) f = scanPairs ts f
         findValue FAny _ = return FAny
-        findValue t _ = throwError $ "Left side of accessor should be table."
+        findValue t _ = throwError "Left side of accessor should be table."
         
         scanPairs :: [(F, V)] -> F -> TypeState F
-        scanPairs [] _ = throwError $ "No such field in table!"
-        scanPairs (t:ts) f = if f <? (fst t) then return . rconst . snd $ t else scanPairs ts f
+        scanPairs [] _ = throwError "No such field in table!"
+        scanPairs (t:ts) f = if f <? fst t then return . rconst . snd $ t else scanPairs ts f
 
 
 
@@ -477,7 +468,7 @@ tConstr es mApp = do
     Just app -> do
       tCall <- tApply app
       let (exps, vexp) = s2f tCall
-          varArg = VF $ vexp
+          varArg = VF vexp
       return $ FTable (zip fTypes vTypes ++ zip (FL . LInt <$> [1..]) (VF <$> exps) ++ [(FB BInt, varArg)]) Unique
   -- TODO: well-formed checking 
   if {-wf tableType-} True then return tableType else throwError "Table is not well formed"
@@ -496,13 +487,13 @@ tFun :: Expr -> TypeState F
 tFun (ExpFunDecl (ParamList tIds mf) s blk@(Block b)) = do
     newScopes
     insertSToPi (-1) s
-    let filteredFav nms = fmap getIdVal $ filter isIdVal nms
+    let filteredFav nms = getIdVal <$> filter isIdVal nms
     let argType = SP $ P (fmap snd tIds) mf
     mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
     when (isJust mf) (insertToGamma "..." (TF . fromJust $ mf)) 
     closeAll
     tBlock blk
-    openSet (concat $ fmap (frv []) b)
+    openSet $ concatMap (frv []) b
     closeSet (filteredFav . concat $ fmap (fav []) b)
     popScopes
     return $ FFunction argType s
@@ -512,13 +503,11 @@ tDiv :: Expr -> TypeState F
 tDiv (ExpABinOp Div e1 e2) = do
     TF f1 <- getTypeExp e1
     TF f2 <- getTypeExp e2
-    if f1 <? (FB BInt) && f2 <? (FB BInt)
+    if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
-    else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber) || (f1 <? FB BNumber && f2 <? FB BNumber)
          then return (FB BNumber)
-         else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
-              then return (FB BNumber)
-              else if f1 == FAny || f2 == FAny 
+         else if f1 == FAny || f2 == FAny 
               then return FAny
               else throwError "tDiv cannot typecheck"
 
@@ -529,11 +518,9 @@ tIntDiv (ExpABinOp IntDiv e1 e2) = do
       TF f2 <- getTypeExp e2
       if f1 <? FB BInt && f2 <? FB BInt
       then return (FB BInt)
-      else if (f1 <? (FB BInt) && f2 <? (FB BNumber)) || (f2 <? (FB BInt) && f1 <? (FB BNumber))
+      else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber) || ( f1 <? FB BNumber && f2 <? FB BNumber)
            then return (FB BInt)
-           else if f1 <? (FB BNumber) && f2 <? (FB BNumber)
-                then return (FB BInt)
-                else if f1 == FAny || f2 == FAny 
+           else if f1 == FAny || f2 == FAny 
                 then return FAny
                 else throwError "tIntDiv cannot typecheck"
 
@@ -544,11 +531,9 @@ tMod (ExpABinOp Mod e1 e2) = do
     TF f2 <- getTypeExp e2
     if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
-    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber)
+    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber) || (f1 <? FB BNumber && f2 <? FB BNumber)
          then return (FB BNumber)
-         else if f1 <? FB BNumber && f2 <? FB BNumber
-              then return (FB BNumber)
-              else if f1 == FAny || f2 == FAny 
+         else if f1 == FAny || f2 == FAny 
               then return FAny
               else throwError "tMod cannot typecheck"
 
@@ -560,13 +545,14 @@ tArith (ExpABinOp Add e1 e2) = do
     TF f2 <- getTypeExp e2
     if f1 <? FB BInt && f2 <? FB BInt
     then return (FB BInt)
-    else if (f1 <? FB BInt && f2 <? FB BNumber) || (f2 <? FB BInt && f1 <? FB BNumber)
-         then return (FB BNumber)
-         else if f1 <? FB BNumber && f2 <? FB BNumber
-              then return (FB BNumber)
-              else if f1 == FAny || f2 == FAny 
-              then return FAny
-              else throwError "tArith cannot typecheck"
+    else if (f1 <? FB BInt && f2 <? FB BNumber) ||
+            (f2 <? FB BInt && f1 <? FB BNumber) || 
+            (f1 <? FB BNumber && f2 <? FB BNumber)
+         then return (FB BNumber) 
+         else
+             if f1 == FAny || f2 == FAny 
+             then return FAny 
+             else throwError "tArith cannot typecheck"
 
 
 
@@ -649,7 +635,7 @@ tLen (ExpUnaryOp Hash e1) = do
 closeAll :: TypeState ()
 closeAll = do
   env <- get
-  let closeEnv gm = fmap wrappedClose gm 
+  let closeEnv = fmap wrappedClose 
       wrappedClose (TF f) = TF $ close f
       wrappedClose x = x
       gammaStack = fmap closeEnv (env ^. gamma)

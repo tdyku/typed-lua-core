@@ -19,7 +19,7 @@ instance TypeShow F where
     tShow FSelf = "self"
     tShow (FUnion fs) = "(" ++ intercalate "|" (fmap tShow fs) ++ ")"
     tShow (FFunction s1 s2) = tShow s1 ++ "->" ++ tShow s2
-    tShow (FTable tts tt) = "{" ++ (intercalate ", " (fmap (\(x,y) -> tShow x ++ ":" ++ tShow y) tts)) ++ "}_" ++ tShow tt
+    tShow (FTable tts tt) = "{" ++ intercalate ", " (fmap (\(x,y) -> tShow x ++ ":" ++ tShow y) tts) ++ "}_" ++ tShow tt
     tShow (FVariable x) = x
     tShow (FRecursive x f) = "u" ++ x ++ "." ++ tShow f
 
@@ -57,7 +57,7 @@ instance TypeShow S where
 
 
 instance TypeShow P where
-    tShow (P fs (mF)) = "(" ++ intercalate "," (fmap tShow fs) ++ maybe "" (\x ->  "," ++ tShow x ++ "*") mF  ++ ")"
+    tShow (P fs mF) = "(" ++ intercalate "," (fmap tShow fs) ++ maybe "" (\x ->  "," ++ tShow x ++ "*") mF  ++ ")"
 
 
 instance TypeShow T where

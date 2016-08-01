@@ -15,7 +15,7 @@ import Text.Show.Pretty      (ppShow)
 
 allT, anyT :: [Bool] -> Bool
 allT = all (== True)
-anyT = any (== True)
+anyT = elem True
 
 
 type Name = String
@@ -182,10 +182,10 @@ s2f (SP (P fs mf)) = (fs, fromMaybe FNil mf)
 s2f (SUnion ps) = 
     let pNum = length ps
         mLen = maximum $ fmap (length . getFsFromP) ps
-        extent (P fs mf) = fs ++ replicate (mLen - (length fs)) (fromMaybe FNil mf)
+        extent (P fs mf) = fs ++ replicate (mLen - length fs) (fromMaybe FNil mf)
         extended = fmap extent ps
         varargs = reverse . nub . reverse $ fmap getMFromP ps ++ [FNil]
-        sVarargs = if length varargs == 1 then varargs !! 0 else FUnion varargs
+        sVarargs = if length varargs == 1 then head varargs else FUnion varargs
         merge i n ms es | i == n = ms
                         | otherwise = merge (i+1) n (ms ++ [FUnion (fmap (!! i) es)]) es
     in  (merge 0 mLen [] extended, sVarargs)

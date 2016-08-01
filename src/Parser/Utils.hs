@@ -1,11 +1,10 @@
 module Parser.Utils where
 
 import           Text.Parser.Char                         (letter, lower, alphaNum, string, digit, char, spaces, space)
-import           Text.Parser.Combinators                  (option, choice, between, sepBy, sepBy1)
-import           Text.Parser.Combinators                  (many) 
+import           Text.Parser.Combinators                  (option, choice, between, sepBy, sepBy1,
+                                                           many, try, (<?>))
 import           Control.Monad                            (liftM)
 import           Control.Applicative                      ((<*>), (*>), pure)
-import           Text.Parser.Combinators                  (try, (<?>))
 import           Text.Trifecta.Parser                     (Parser)
 
 (<:>) a b = (:) <$> a <*> b
@@ -26,7 +25,7 @@ spaces1 = space >> spaces
 idVar :: Parser String
 idVar = choice [letter, lower]  <:> many alphaNum <* spaces
 
-optionMaybe p = option Nothing (liftM Just p)
+optionMaybe p = option Nothing (fmap Just p)
 
 many1 :: Parser a -> Parser [a]
 many1 p = p <:> many p

@@ -50,7 +50,7 @@ recFold _ f = f
 sTable1, sTable2, sTable3, sTable4, sTable5, sTable6 :: [(String, String)] -> F -> F -> Bool
 sTable1 amp (FTable lefts tt1) (FTable rights tt2) =
     let rule (f', v') (f, v) = isSub amp f f' && isSub amp f' f && cSub amp v v'
-        firstLaw = fmap (\x -> (fmap (rule x)  lefts)) rights
+        firstLaw = fmap (\x -> fmap (rule x)  lefts) rights
         forEachExists = allT $ fmap anyT firstLaw
     in  forEachExists
 
@@ -58,7 +58,7 @@ sTable1 amp (FTable lefts tt1) (FTable rights tt2) =
 sTable2 amp (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = if isSub amp f f' then uSub amp v v' else True
         rule2 (f',_) (f,_) = isSub amp f f'
-        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping1 = allT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
         condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
                                            in if all (== False) subResult then oSub amp (VF FNil) v' else True) ts2
     in allT condSubtyping1 && allT condSubtyping2
@@ -67,7 +67,7 @@ sTable2 amp (FTable ts1 tt1) (FTable ts2 tt2) =
 sTable3 amp (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = isSub amp f f' && uSub amp v v'
         rule2 (f',_) (f,_) = isSub amp f f'
-        condSubtyping1 = fmap anyT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping1 = anyT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
         condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
                                            in if all (== False) subResult then oSub amp (VF FNil) v' else True) ts2
     in allT condSubtyping1 && allT condSubtyping2
@@ -85,7 +85,7 @@ sTable4 amp (FTable ts1 tt1) (FTable ts2 tt2) =
 sTable5 amp (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = isSub amp f f' && cSub amp v v'
         rule2 (f',_) (f,_) = isSub amp f f'
-        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping1 = allT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
         condSubtyping2 = fmap (\(f',v') -> let subResult = fmap (rule2 (f', v')) ts1
                                            in if all (== False) subResult then oSub amp (VF FNil) v' else True) ts2
     in anyT condSubtyping1 && allT condSubtyping2
@@ -94,8 +94,8 @@ sTable5 amp (FTable ts1 tt1) (FTable ts2 tt2) =
 sTable6 amp (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = isSub amp f f' && isSub amp f' f && cSub amp v  v'
         rule2 (f,v) (f',v') = isSub amp f f' && isSub amp f' f && cSub amp v' v
-        condSubtyping1 = fmap allT $ fmap (\x -> fmap (rule1 x) ts2) ts1
-        condSubtyping2 = fmap allT $ fmap (\x -> fmap (rule2 x) ts1) ts2
+        condSubtyping1 = allT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = allT <$> fmap (\x -> fmap (rule2 x) ts1) ts2
     in anyT condSubtyping1 && anyT condSubtyping2
 
 instance Subtype S where
