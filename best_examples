@@ -55,3 +55,7 @@ local person = {} in
 -- 9. Global variables as variables in _ENV table
 local a = 2 in 
     b = a + 2
+
+-- 10. Setmetatable1
+local tab = {} in
+    fun tab:foo():(number) |setmetatable({}, {["index"] = tab})|; return 0

@@ -70,6 +70,7 @@ tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   let filteredFav nms = fmap getIdVal $ filter isIdVal nms
   closeAll
   newScopes
+  insertToGamma tabId (TF FSelf)
   insertSToPi (-1) retType
   insertToGamma "self" (TF t)
   mapM_ (\(k,v) -> insertToGamma k (TF v)) tIds
@@ -148,8 +149,25 @@ tApply VarArg = do
 
 
 tMetaTable :: ExprList -> TypeState S
-tMetaTable eList = do
-    error "I'm here, as I should" 
+tMetaTable (ExprList [ExpTableConstructor [] Nothing, ExpTableConstructor [(ExpString "index", idExpr)] Nothing] Nothing) = do
+      TF expSelf <- getTypeExp idExpr
+      case expSelf of
+          FSelf -> return . SP $ P [FSelf] Nothing
+          FTable tts Fixed -> return . SP $ P [FTable tts Open] Nothing
+
+          _ -> throwError $ "setmetatable[index] should set type to self, not:\n" ++ tShow expSelf
+
+tMetaTable (ExprList [e, ExpTableConstructor [(ExpString "index", idExpr)] Nothing] Nothing) = do
+    TF expSelf <- getTypeExp idExpr
+    TF eType <- getTypeExp e
+    TF tabType <- lookupGamma "self"
+    if expSelf == FSelf
+    then if tabType <? eType
+         then return . SP $ P [FSelf] Nothing
+         else throwError $ "In setmetatable:\n first arg has type " ++ tShow tabType ++ " which is not subtype of second arg: " ++ tShow eType
+    else throwError $ "setmetatable[index] should set type to self, not: \n" ++ tShow expSelf
+
+
 
 -- T-LHSLIST
 tLHSList :: [LHVal] -> TypeState S
