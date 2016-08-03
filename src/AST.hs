@@ -2,7 +2,7 @@ module AST where
 
 import Types (S,F,V)
 
-data Block = Block [Stm] deriving Show
+data Block = Block [Stm] deriving (Show, Eq)
 
 data Stm = Skip                                     -- many statements              
          | StmAssign [LHVal] ExprList                        -- [l] = el
@@ -14,7 +14,7 @@ data Stm = Skip                                     -- many statements
          | StmReturn ExprList                          -- return el
          | StmVoidAppl Appl                         -- |a|0
          | StmMthdDecl Id Id ParamList S Block      -- fun id1:id2 (pl):S s; return el
-         deriving Show
+         deriving (Show, Eq)
 
 
 data Expr = ExpNil                         -- nil
@@ -32,26 +32,26 @@ data Expr = ExpNil                         -- nil
           | ExpBBinOp BOp Expr Expr        -- e1 & e2, e1 and e2, e1 or e2
           | ExpUnaryOp UnOp Expr           -- not e, # e
           | ExpOneResult Appl              -- |me|1
-          deriving Show
+          deriving (Show, Eq)
 
 data LHVal = IdVal Id                      -- id
            | TableVal Id Expr              -- e1[e2]
            | TypeCoercionVal Id Expr V     -- id[e]<V>
-           deriving Show
+           deriving (Show, Eq)
 
 data ExprList = ExprList [Expr] (Maybe Appl)
-    deriving Show
+    deriving (Show, Eq)
 
 data Appl = FunAppl Expr ExprList                 -- e(el)
           | MthdAppl Expr Id ExprList              -- e:n(el)
           | VarArg
-          deriving Show           
+          deriving (Show, Eq)           
 
-data ParamList = ParamList [(Id, F)] (Maybe F) deriving Show  -- id:F+ | id:F+, ...:F
+data ParamList = ParamList [(Id, F)] (Maybe F) deriving (Show, Eq)  -- id:F+ | id:F+, ...:F
 
 type IdType = (Id, F)
 type TableList = [(Expr, Expr)]
 type Id = String
-data AOp = Add | Concat | Equals | LessThan | Div | Mod | IntDiv deriving Show
-data BOp = Amp | And | Or deriving Show
-data UnOp = Hash | Not deriving Show
+data AOp = Add | Concat | Equals | LessThan | Div | Mod | IntDiv deriving (Show, Eq)
+data BOp = Amp | And | Or deriving (Show, Eq)
+data UnOp = Hash | Not deriving (Show, Eq)
