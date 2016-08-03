@@ -24,7 +24,7 @@ compile fpath = parseFromFile pManyStm fpath
               Nothing  -> return ()
               Just res -> do
                 transformedRes <- runGlobalTransform res
-                putStrLn . ppShow $ res
+                putStrLn . ppShow $ transformedRes
                 checkedRes <- runTypechecker transformedRes tBlock
                 case checkedRes of
                   Right () -> putStrLn "correct!"

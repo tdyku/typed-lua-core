@@ -47,7 +47,9 @@ test-suite spec
   hs-source-dirs: test
   main-is: Main.hs
   other-modules: Test.Parser
-               , Test.Typechecker
+               , Test.Typechecker.Utils
+               , Test.Typechecker.Typechecker
+               , Test.Typechecker.Subtyping
   build-depends: base
                , hspec
                , trifecta
