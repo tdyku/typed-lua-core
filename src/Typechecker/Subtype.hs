@@ -94,9 +94,9 @@ sTable5 amp (FTable ts1 tt1) (FTable ts2 tt2) =
 sTable6 amp (FTable ts1 tt1) (FTable ts2 tt2) = 
     let rule1 (f,v) (f',v') = isSub amp f f' && isSub amp f' f && cSub amp v  v'
         rule2 (f,v) (f',v') = isSub amp f f' && isSub amp f' f && cSub amp v' v
-        condSubtyping1 = allT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
-        condSubtyping2 = allT <$> fmap (\x -> fmap (rule2 x) ts1) ts2
-    in anyT condSubtyping1 && anyT condSubtyping2
+        condSubtyping1 = anyT <$> fmap (\x -> fmap (rule1 x) ts2) ts1
+        condSubtyping2 = anyT <$> fmap (\x -> fmap (rule2 x) ts1) ts2
+    in allT condSubtyping1 && allT condSubtyping2
 
 instance Subtype S where
     isSub amp (SUnion ss) (SP p)  = allT $ fmap (\x -> isSub amp x p) ss

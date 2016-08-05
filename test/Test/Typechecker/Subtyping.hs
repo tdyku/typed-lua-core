@@ -68,13 +68,28 @@ tableTest :: Spec
 tableTest = describe "Table types" $ do
     it "fixed/closed < closed" $
         let tfc = FTable [(FB BString, VF $ FNil), (FB BInt, VF $ FL LTrue)] Fixed
-            tc  = FTable [(FB BString, VF $ FUnion [FNil]), (FB BInt, VF $ FL LTrue)] Closed
+            tc  = FTable [(FB BString, VF $ FUnion [FNil, FAny]), (FB BInt, VF $ FL LTrue)] Closed
         in tfc <? tc
-    it "unique < closed" True
-    it "unique < unique/open/fixed" True
-    it "open < closed" True
-    it "open < open/fixed" True
-    it "fixed < fixed" True
+    it "unique < closed" $
+        let uniq = FTable [(FL $ LString "x", VF . FL $ LString "foo")] Unique
+            clsd = FTable [(FL $ LString "x", VF . FL $ LString "foo"), (FL $ LString "y", VF . FUnion $ [FB BString, FNil])] Closed
+        in uniq <? clsd
+    it "unique < unique/open/fixed" $
+        let uniq = FTable [(FL $ LString "x", VF . FL $ LString "foo")] Unique
+            fxd  = FTable [(FL $ LString "x", VF . FL $ LString "foo"), (FL $ LString "y", VF . FUnion $ [FB BString, FNil])] Fixed
+        in uniq <? fxd
+    it "open < closed" $
+        let opn = FTable [(FL $ LString "x", VF . FL $ LString "foo")] Unique
+            clsd = FTable [(FL $ LString "x", VF . FL $ LString "foo"), (FL $ LString "y", VF . FUnion $ [FB BString, FNil])] Closed
+        in opn <? clsd
+    it "open < open/fixed" $
+        let opn = FTable [(FL $ LString "x", VF . FL $ LString "foo")] Unique
+            fxd = FTable [(FL $ LString "x", VF . FL $ LString "foo"), (FL $ LString "y", VF . FUnion $ [FB BString, FNil])] Closed
+        in opn <? fxd
+    it "fixed < fixed" $
+        let f1  = FTable [(FB BString, VF $ FNil), (FB BInt, VF $ FL LTrue)] Fixed
+            f2  = FTable [(FB BString, VF $ FUnion [FNil, FAny]), (FB BInt, VF $ FL LTrue)] Fixed
+        in f1 <? f2
 
 
 recursiveTest :: Spec
