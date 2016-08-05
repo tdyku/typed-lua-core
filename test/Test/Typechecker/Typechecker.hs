@@ -7,6 +7,9 @@ import Test.Typechecker.Subtyping
 
 typecheckerTest :: Spec
 typecheckerTest = do 
-	describe "Subtyping" $ do
-		literalsTest
-		basicTest
+    describe "Subtyping" $ do
+        literalsTest
+        basicTest
+        tableTest
+        recursiveTest
+        anyTest

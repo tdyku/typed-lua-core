@@ -133,6 +133,7 @@ cSub, oSub, uSub :: [(String, String)] -> V -> V -> Bool
 cSub amp (VF f1) (VF f2) = f1 <? f2 && f2 <? f1
 cSub amp (VConst f1) (VConst f2) = f1 <? f2
 cSub amp (VF f1) (VConst f2) = f1 <? f2
+cSub _ _ _ = False
 
 uSub amp (VF f1) (VF f2) = f1 <? f2 
 uSub amp (VConst f1) (VConst f2) = f1 <? f2
