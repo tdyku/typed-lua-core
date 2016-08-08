@@ -43,9 +43,16 @@ instance Subtype F where
 
 recFold :: String -> F -> F
 recFold x f@(FTable tts tp) = FTable (fmap (applyRec x f) tts) tp
-    where applyRec x f (key, VConst val) = if val == FVariable x then (key, VConst $ FRecursive x f) else (key, VConst val)
-          applyRec x f (key, VF val) = if val == FVariable x then (key, VF $ FRecursive x f) else (key, VF val) 
+    where applyRec x f (key, VConst val) = (foldVar x f key, VConst $ foldVar x f val)
+          applyRec x f (key, VF val) = (foldVar x f key, VF $ foldVar x f val) 
 recFold _ f = f
+
+foldVar x0 f (FVariable x1) = if x0 == x1 then FRecursive x0 f else FVariable x1
+foldVar x f (FUnion fs) = FUnion $ fmap (foldVar x f) fs
+foldVar x f (FTable kvs tp) = FTable (fmap (foldVarMap x f) kvs) tp
+  where foldVarMap x f (k, VF v) = (foldVar x f k, VF $ foldVar x f v)
+        foldVarMap x f (k, VConst v) = (foldVar x f k, VConst $ foldVar x f v)
+foldVar x f r@(_) = r
 
 sTable1, sTable2, sTable3, sTable4, sTable5, sTable6 :: [(String, String)] -> F -> F -> Bool
 sTable1 amp (FTable lefts tt1) (FTable rights tt2) =
