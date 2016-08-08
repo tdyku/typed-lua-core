@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/tomkee/typed-lua-core.svg?branch=master)](https://travis-ci.org/tomkee/typed-lua-core)
+
 # Installation
 There are 2 ways of installing compiler on your machine:
   1. **cabal** If you have well-configured ghc, Cabal and cabal-install just type `cabal install` and run generated binary
