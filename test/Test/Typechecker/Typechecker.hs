@@ -105,7 +105,10 @@ tables = describe "Tables" $ do
 
 recursion :: Spec
 recursion = describe "Recursive types" $ do
-    it "Recursive declaration" True
+    it "Recursive declaration" $ isCorrect $ typeCheck source0
+    where source0 = unlines [ "rec a : ux.{\"next\":(x|nil)} = {[\"next\"]={[\"next\"] = nil  }} in"
+                            , "    skip"
+                            ]
 
 
 
