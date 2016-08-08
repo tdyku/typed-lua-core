@@ -26,7 +26,7 @@ instance Subtype F where
     isSub amp  _                   FAny                = True
     isSub amp  FAny                _                   = True
     isSub amp (FFunction s1 s2  ) (FFunction s3 s4  )  = isSub amp s3 s1 && isSub amp s2 s4                                              
-    isSub amp (FUnion fs        )  x                   = allT $ fmap (\y -> isSub amp y x) fs
+    isSub amp u@(FUnion fs      )  x                   = (u == x) || (allT $ fmap (\y -> isSub amp y x) fs)
     isSub amp  x                  (FUnion fs        )  = anyT $ fmap (isSub amp x) fs
     isSub amp (FVariable x1     ) (FVariable x2     )  = (x1,x2) `elem` amp
     isSub amp (FRecursive x1 f1 ) (FRecursive x2 f2 )  = isSub ((x1,x2):amp) f1 f2

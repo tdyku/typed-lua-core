@@ -237,7 +237,7 @@ ps2Projections tExps ps = do
 readExp :: String -> T -> TypeState T
 readExp nm (TF f) = TF <$>  processF nm f
   where processF :: String -> F -> TypeState F
-        processF var t@(FTable ts Unique) = do
+        processF var t@(FTable ts tp) = do
           isInRetrun <- getRetCounter
           let tabMod = if isInRetrun == 0 then close else fix
           insertToGamma var (TF . open $ t) >> (return . tabMod $ t)
@@ -424,14 +424,12 @@ getTypeExp = \case
 
 tCoercion :: Expr -> TypeState F
 tCoercion (ExpTypeCoercion f id) = do
-  TF idExp <- getTypeExp (ExpVar id)
+  idExp <- tSimpleLookup id
   if idExp <? f 
-    then if tag Closed f
-           then insertToGamma id (TF . reopen $ f) >> return f
-           else if tag Fixed f
-                  then insertToGamma id (TF f) >> return f
-                  else throwError $ "Error in coercion: " ++ show id ++ " is neither closed nor fixed"
-    else throwError $ "Error in coercion: " ++ show id ++ " is not subtype of: " ++ ppShow f
+    then do insertToGamma id (TF f)
+            TF newF <- getTypeExp (ExpVar id)
+            return newF
+    else throwError $ "Error in coercion: " ++ id ++ " has type " ++ tShow idExp ++ " which is not subtype of: " ++ tShow f
 
 
 tLookUpId :: Expr -> TypeState T
