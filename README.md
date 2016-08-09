@@ -30,6 +30,7 @@ Typed Lua core does not support features and syntactic sugar as:
 * unary opertors other than # and not
 
 
+
 ## Overview of project
 Compilation can be divided into 3 phases:
 1. Parsing
@@ -60,9 +61,24 @@ Because of this I implemented compiler pass called **Globals transformation** wh
 Source code of **global transformation** can be found in `src/Transform/Globals`.
 
 ### 3. Typechecking
-Typed Lua Core Typechecker consisted of
+Typed Lua Core Typechecker consists of few kinds of rules:
+* Subtyping rules
+* Typing rules:
+    * Statements typing rules
+    * Expressions typing rules
 
-
+#### Subtyping rules
+Subtyping rules are implemented in file `src/Typechecker/Subtype.hs`.
+They can be easily extended. In order to to this you just need to edit or add new implementation of some pattern in method `<?`.
+TODO
+#### Typing rules
+Both statements and expressions typing rules are implemented in file `src/Typechecker/Type.hs`
+##### Statements typing rules
+Rules can be edited/extended by adding entries to function `tStmt`.
+TODO
+##### Expressions typing rules
+Rules can be edited/extended by adding entries to function `getTypeExp`.
+TODO
 ## Installation
 * Download & install [stack](https://docs.haskellstack.org/en/stable/README/)
 * `stack setup` to install proper version of ghc
