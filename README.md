@@ -1,11 +1,12 @@
 # Typed Lua Core Typechecker
 [![Build Status](https://travis-ci.org/tomkee/typed-lua-core.svg?branch=master)](https://travis-ci.org/tomkee/typed-lua-core)
 
-The idea of this project is to use Haskell as another way of reasoning about the typing rules of Typed Lua. Project involves implementing parser and typechecker for Typed Lua Core.
+The idea of project is to use Haskell as another way of reasoning about the typing rules of Typed Lua. Project involves implementing parser and typechecker for Typed Lua Core.
 
-[Typed Lua](https://github.com/andremm/typedlua) is a typed superset of Lua that compiles to plain Lua. It provides optional type annotations, compile-time type checking, and class-based object oriented programming through the definition of classes, interfaces, and modules.
+**[Typed Lua](https://github.com/andremm/typedlua)** is a typed superset of Lua that compiles to plain Lua. It provides optional type annotations, compile-time type checking, and class-based object oriented programming through the definition of classes, interfaces, and modules.
 
-Typed Lua Core is reduced version of Typed Lua prepared to present rules of Typed Lua type system. 
+**Typed Lua Core** is reduced version of Typed Lua prepared to present rules of Typed Lua type system. 
+
 Typed Lua Core contains:
 * multiple assignments
 * local (typed and untyped) declarations
@@ -29,6 +30,7 @@ Typed Lua core does not support features and syntactic sugar as:
 * bitwise operators other than &
 * unary opertors other than # and not
 
+For more informations about TypedLua typesystem and Typed Lua Core syntax please read [Typed Lua: An Optional Type System for Lua](https://github.com/andremm/typedlua/blob/master/doc/thesis/thesis_andre_certified.pdf).
 
 
 ## Overview of project
@@ -36,6 +38,12 @@ Compilation can be divided into 3 phases:
 1. Parsing
 2. Resolving global variables
 3. Typechecking
+
+### 0. AST and type hierarchy
+Typed Lua Core AST is quite similar to [Typed Lua AST](https://github.com/andremm/typedlua/blob/master/typedlua/tlast.lua). It can be found in file `src/AST.hs`.
+
+Type hierarchy is implemented in file `src/Types.hs`.
+
 
 ### 1. Parsing
 Parsing is done with haskell [trifecta](https://hackage.haskell.org/package/trifecta) library.
@@ -70,15 +78,77 @@ Typed Lua Core Typechecker consists of few kinds of rules:
 #### Subtyping rules
 Subtyping rules are implemented in file `src/Typechecker/Subtype.hs`.
 They can be easily extended. In order to to this you just need to edit or add new implementation of some pattern in method `<?`.
-TODO
+
+During GSOC 2016 I implemented subtyping rules for:
+* literal types
+    * literal string
+    * literal float
+    * literal booleans
+    * literal integer
+* basic types
+    * integer
+    * string
+    * number
+    * bool
+* nil values
+* dynamic any
+* `value` type
+* self type
+* unions
+* functions
+* tuples
+* varargs
+* tuple unions
+* tables
+* table fields
+* recursion
+    * amber rule
+    * assumption
+    * left-right unfolding
+* expression types
+    * projection types
+    * filters
+    * tuples of expression types
+
 #### Typing rules
 Both statements and expressions typing rules are implemented in file `src/Typechecker/Type.hs`
 ##### Statements typing rules
 Rules can be edited/extended by adding entries to function `tStmt`.
-TODO
+Statement typing rules implemented during GSOC 2016:
+* skip
+* assignment
+* typed/untyped local declaration
+* recursive declaration
+* method declaration
+* while & if
+* return statement
+* void function and method call
 ##### Expressions typing rules
 Rules can be edited/extended by adding entries to function `getTypeExp`.
-TODO
+
+Expression typechecking rules I implemented:
+* literals
+* variable type reading
+* table index reading
+* type coercions
+* function definitions
+* table constructors
+* fields declaration
+* binary operators:
+    * relational
+    * arithmetical
+* unary operators
+* function and method calls
+* variable writing
+* index writing
+* table refinements
+* expression list
+* varargs
+* self
+* nil
+* metatables
+* recursion
+
 ## Installation
 * Download & install [stack](https://docs.haskellstack.org/en/stable/README/)
 * `stack setup` to install proper version of ghc
