@@ -1,0 +1,2 @@
+local res:number, a:integer, b:number = 0, 1, 0.5 in
+    res = a + b

@@ -1,0 +1,5 @@
+local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
+    skip 
+in
+    local a = {["x"] = 1, ["y"] = 2, idiv(10, 5)} in
+        skip

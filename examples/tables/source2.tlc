@@ -1,0 +1,3 @@
+local person = {} in
+    person["firstname"] <string> = "Lou";
+    person["lastname"] <string> = "Reed"

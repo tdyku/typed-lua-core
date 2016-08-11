@@ -1,0 +1,2 @@
+rec a : ux.{"next":(x|nil)} = {["next"]={["next"] = nil  }} in
+    skip

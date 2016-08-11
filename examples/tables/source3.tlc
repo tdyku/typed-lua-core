@@ -1,0 +1,4 @@
+local a : {}_unique = {} in
+local b : {}_open = a in
+    a["x"] <string> = "foo";
+    b["x"] <integer> = 1

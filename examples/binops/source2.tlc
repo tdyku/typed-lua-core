@@ -1,0 +1,2 @@
+local len:integer, word:string = 0, "testingWord" in
+    len = #word

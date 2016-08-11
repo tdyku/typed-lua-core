@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Test.Typechecker.Utils where
 
-import Text.Trifecta.Parser (parseString)
+import Text.Trifecta.Parser (parseFromFile)
 import Text.Trifecta.Result (Result(..))
 
 import Parser.Code           (pManyStm)
@@ -10,8 +10,8 @@ import Typechecker.Utils     (runTypechecker)
 import Typechecker.Type      (tBlock)
 
 typeCheck :: String -> IO (Either String ())
-typeCheck source = case parseString pManyStm mempty "skip" of
-                        Failure a -> return . Left $ "Cannot parse"
-                        Success res -> do
+typeCheck path = parseFromFile pManyStm path >>= \case
+                        Nothing -> return . Left $ "Cannot parse"
+                        Just res -> do
                             transformedRes <- runGlobalTransform res
                             runTypechecker transformedRes tBlock

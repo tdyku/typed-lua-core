@@ -1,0 +1,3 @@
+local tab:{"a":(number) -> (number)}_unique 
+        = { ["a"] = fun(x:number):(number) return x } in
+    fun tab:a(age:number):(number) return age

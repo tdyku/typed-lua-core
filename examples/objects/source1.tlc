@@ -1,0 +1,2 @@
+local tab:{number:string}_unique = {[1] = "jeden"} in
+    fun tab:a(age:number):(number) return age

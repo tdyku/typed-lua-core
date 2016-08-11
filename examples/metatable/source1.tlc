@@ -1,0 +1,2 @@
+local tab = {} in
+    fun tab:foo():(number) |setmetatable({}, {["index"] = tab})|; return 0

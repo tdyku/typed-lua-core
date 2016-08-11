@@ -1,0 +1,5 @@
+local a : {}_unique = {} in
+    a["x"] <string> = "foo";
+    a["y"] <string> = "bar";
+    local b : {"x" : string, "y" : (string|nil)}_closed = <{"x" : string, "y" : (string|nil)}_open> a in 
+        a["z"] <integer> = 1
