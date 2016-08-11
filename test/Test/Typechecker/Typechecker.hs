@@ -38,9 +38,10 @@ typecheckerTest = do
         binOps
         statements
         tables
+        objects
         recursion
-
-
+        metatable
+        objects
 
 
 
@@ -48,12 +49,17 @@ binOps :: Spec
 binOps = describe "Simple expressions" $ do
     it "BinOps" $ isCorrect $ typeCheck source1 
     it "UnOps" $ isCorrect $ typeCheck source2
+    it "Global variables" $ isCorrect $ typeCheck source3
     where source1 = unlines ["local res:number, a:integer, b:number = 0, 1, 0.5 in"
                   , "res = a + b"
                   ]
 
           source2 = unlines ["local len:integer, word:string = 0, \"testingWord\" in"
                             , "len = #word"
+                            ]
+          source3 = unlines [ "local ENV:{\"b\":integer}_unique = {[\"b\"]=0} in"    
+                            , "    local a = 2 in" 
+                            , "        b = a + 2"
                             ]
 
 
@@ -104,7 +110,7 @@ tables = describe "Tables" $ do
                             ]
 
 recursion :: Spec
-recursion = describe "Recursive types" $ do
+recursion = describe "Recursive types" $
     it "Recursive declaration" $ isCorrect $ typeCheck source0
     where source0 = unlines [ "rec a : ux.{\"next\":(x|nil)} = {[\"next\"]={[\"next\"] = nil  }} in"
                             , "    skip"
@@ -112,10 +118,21 @@ recursion = describe "Recursive types" $ do
 
 
 
+metatable :: Spec
+metatable = describe "Metatable tests" $
+      it "Basic metatable test" $ isCorrect $ typeCheck source0
+      where source0 = unlines [ "local tab = {} in"
+                              , "    fun tab:foo():(number) |setmetatable({}, {[\"index\"] = tab})|; return 0"
+                              ]
 
 
-
-
-
-
-
+objects :: Spec
+objects = describe "Methods and objects" $ do
+    it "Basic method typechecking" $ isCorrect $ typeCheck source0  
+    it "Adding new method - subtype of other one" $ isCorrect $ typeCheck source1
+    where source0 = unlines [ "local tab:{number:string}_unique = {[1] = \"jeden\"} in"
+                            , "    fun tab:a(age:number):(number) return age"
+                            ]
+          source1 = unlines [ "local tab:{\"a\":(number) -> (number)}_unique = { [\"a\"] = fun(x:number):(number) return x } in"
+                            , "fun tab:a(age:number):(number) return age"
+                            ]
