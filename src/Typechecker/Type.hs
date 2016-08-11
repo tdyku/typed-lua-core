@@ -76,12 +76,12 @@ tMethodUO m@(StmMthdDecl tabId funId (ParamList tIds mArgs) retType stms) = do
   when (isJust mArgs) (insertToGamma "..." (TF . fromJust $ mArgs)) 
   tBlock stms
   popScopes
-  let fun = VConst $ FFunction (SP $ P (FSelf : (snd <$> tIds)) mArgs) retType
+  let fun = VConst $ FFunction (SP $ P ((snd <$> tIds)) mArgs) retType
       funNameLit = FL $ LString funId
   if all (==False) $ fmap (funNameLit <?) (fst <$> tls)
   then insertToGamma tabId (TF $ FTable (tls ++ [(funNameLit, fun)]) ttp)
   else unless (anyT $ fmap (\(f,v) -> (funNameLit <? f && f <? funNameLit && rconst fun <? rconst v)) tls)
-              (throwError $ "In method declaration:" ++ funId  ++ " is in table but is not subtype of its value")
+              (throwError $ show tls)
   openSet (frv [] m)
   closeSet (filteredFav $ fav [] m)
 
