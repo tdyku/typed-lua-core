@@ -53,15 +53,15 @@ Source code of type parser can be found in `src/Parser/Types.hs`.
 Typed lua core expressions and statements parser is implemented in file `src/Parser/Code.hs`.
 
 ### 2. Resolving global variables
-Typed lua core supports only local variable declarations. All global variables are in fact members of unique table `ENV`. Because of this all reads and writes of global variables should be translated to table access.
+Typed lua core supports only local variable declarations. All global variables are in fact members of unique table `_ENV`. Because of this all reads and writes of global variables should be translated to table access.
 In example:
 `b = 1`
 should be translated to:
-`ENV["b"] = 1`.
+`_ENV["b"] = 1`.
 
-Moreover global table `ENV` should be declared explicitly in top, local scope:
+Moreover global table `_ENV` should be declared explicitly in top, local scope:
 ```
-local ENV:{"a":integer, "b":integer} = {["a"] = 1, ["b"] = 1}
+local _ENV:{"a":integer, "b":integer} = {["a"] = 1, ["b"] = 1}
 in b = a * b
 ```
 
