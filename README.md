@@ -200,31 +200,75 @@ in
 ```
 Example which briefly depicts work of projection types. `idiv` has type `integer,integer` or `nil,string`. Inside `if` statement we can project union of these tuples for proper type. Inside `then` variable `q` has type `integer`, inside `else` - `string`.
 ### Tables
-    * `examples/tables/source1.tlc`
-        TODO
-    * `examples/tables/source2.tlc`
-        TODO
-    * `examples/tables/source3.tlc`
-        TODO
-    * `examples/tables/source4.tlc`
-        TODO
-    * `examples/tables/source5.tlc`
-        TODO
-
+* `examples/tables/source1.tlc`
+```
+local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
+    skip 
+in
+    local a = {["x"] = 1, ["y"] = 2, idiv(10, 5)} in
+        skip
+```
+Basic table construction - we constructed table of type `{"x":integer, "y":integer, 1:(integer|nil), 2:(integer|string)}`.
+* `examples/tables/source2.tlc`
+```
+local person = {} in
+    person["firstname"] <string> = "Lou";
+    person["lastname"] <string> = "Reed"
+```
+Basic table refinement - we construct unique table `{}` but then extend it with new fields.
+* `examples/tables/source3.tlc`
+```
+local a : {}_unique = {} in
+local b : {}_open = a in
+    a["x"] <string> = "foo";
+    b["x"] <integer> = 1
+```
+Example of code which won't typecheck as aliasing a produces the type `{}_closed` that is not a subtype of `{}_open`. 
+* `examples/tables/source4.tlc`
+```
+local a : {}_unique = {} in
+    a["x"] <string> = "foo";
+    a["y"] <string> = "bar";
+    local b : {"x" : string, "y" : (string|nil)}_closed = <{"x" : string, "y" : (string|nil)}_open> a in 
+        a["z"] <integer> = 1
+```
+Type coercion in work - coercion converts the type of a from `{"x" : string, "y" : string}_unique` to `{"x" : string, "y" : string|nil}_open`,
+and results in `{"x" : string, "y" : string|nil}_closed`, which is a subtype of
+`{"x" : string, "y" : string|nil}_closed`, the type of b.
+* `examples/tables/source5.tlc`
+```
+local b:{string:(integer|nil), "z":(1|nil)}_closed = {["x"]=1, ["y"]=2} in
+   skip   
+```
+This example typechecks because of subtyping rules between `closed` and `unique` tables.
 ### Object oriented programming
-    * `examples/objects/source1.tlc`
-        TODO
-    * `examples/objects/source1.tlc`
-        TODO
-
+* `examples/objects/source1.tlc`
+```
+local tab:{number:string}_unique = {[1] = "jeden"} in
+    fun tab:a(age:number):(number) return age
+```
+Basic method example - we are making new - unique - table, then we are adding new method to it.
+* `examples/objects/source2.tlc`
+```
+local tab:{"a":(number) -> (number)}_unique 
+        = { ["a"] = fun(x:number):(number) return x } in
+    fun tab:a(age:number):(number) return age
+```
+Here we are also adding method to table, but this time similar method already existed in table. It is possible because type of method is subtype of existing method.
 ### Recursion
-    * `examples/recursion/source1.tlc`
-        TODO
-
+* `examples/recursion/source1.tlc`
+```
+rec a : ux.{"next":(x|nil)} = {["next"]={["next"] = nil  }} in
+    skip
+```
+Example of unfolding recursion rule - we are using it to replace `x` with `ux.F` itself.
 ### Metatables
-    * `examples/recursion/source1.tlc`
-        TODO
-
+* `examples/recursion/source1.tlc`
+```
+local tab = {} in
+    fun tab:foo():(number) |setmetatable({}, {["index"] = tab})|; return 0
+```
+Basic metatable example - we are setting metatable for this method to already set one - `tab`.
 ## Installation
 * Download & install [stack](https://docs.haskellstack.org/en/stable/README/)
 * `stack setup` to install proper version of ghc
