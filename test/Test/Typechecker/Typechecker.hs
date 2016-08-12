@@ -49,7 +49,7 @@ binOps = describe "Simple expressions" $ do
     it "BinOps" $ isCorrect $ typeCheck source1 
     it "UnOps" $ isCorrect $ typeCheck source2
     it "Global variables" $ isCorrect $ typeCheck source3
-    where path = "examples/binops/"
+    where path = "examples/simple/"
           source1 = path ++ "source1.tlc"
           source2 = path ++ "source2.tlc"
           source3 = path ++ "source3.tlc"

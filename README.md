@@ -150,6 +150,52 @@ Expression typechecking rules I implemented:
 * metatables
 * recursion
 
+## Examples
+Directory `examples/` contains Typed Lua Core source code which is used by test suite to perform typechecking. Examples are structured in several categories:
+* Simple examples
+* Statements
+* Tables
+* Object oriented programming
+* Recursion
+* Metatables
+
+Examples overview:
+### Simple examples
+    * `examples/simple/source1.tlc`
+        TODO
+    * `examples/simple/source2.tlc`
+        TODO
+    * `examples/simple/source3.tlc`
+        TODO
+
+### Statements
+    * `examples/statements/source1.tlc`
+### Tables
+    * `examples/tables/source1.tlc`
+        TODO
+    * `examples/tables/source2.tlc`
+        TODO
+    * `examples/tables/source3.tlc`
+        TODO
+    * `examples/tables/source4.tlc`
+        TODO
+    * `examples/tables/source5.tlc`
+        TODO
+
+### Object oriented programming
+    * `examples/objects/source1.tlc`
+        TODO
+    * `examples/objects/source1.tlc`
+        TODO
+
+### Recursion
+    * `examples/recursion/source1.tlc`
+        TODO
+
+### Metatables
+    * `examples/recursion/source1.tlc`
+        TODO
+
 ## Installation
 * Download & install [stack](https://docs.haskellstack.org/en/stable/README/)
 * `stack setup` to install proper version of ghc
