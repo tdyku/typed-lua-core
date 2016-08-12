@@ -115,7 +115,7 @@ transformExpr v@(ExpVar id) =
           True -> return v
           False -> if id == "setmetatable" 
                    then return v
-                   else return $ ExpTableAccess (ExpVar "ENV") (ExpString id)
+                   else return $ ExpTableAccess (ExpVar "_ENV") (ExpString id)
 
 transformExpr (ExpTableAccess tab el) = do
     tab' <- transformExpr tab
@@ -184,4 +184,4 @@ transformLHS = mapM trFun
           trFun (TypeCoercionVal id exp v) = transformExpr exp >>= \x -> return $ TypeCoercionVal id x v
           trFun (IdVal id) = isLocal id >>= \case
             True -> return . IdVal $ id
-            False -> return $ TableVal "ENV" (ExpString id)
+            False -> return $ TableVal "_ENV" (ExpString id)

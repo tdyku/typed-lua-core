@@ -23,7 +23,7 @@ comma = char ',' >> spaces
 spaces1 = space >> spaces
 
 idVar :: Parser String
-idVar = choice [letter, lower]  <:> many alphaNum <* spaces
+idVar = choice [letter, char '_']  <:> many alphaNum <* spaces
 
 optionMaybe p = option Nothing (fmap Just p)
 
