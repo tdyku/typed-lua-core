@@ -161,15 +161,44 @@ Directory `examples/` contains Typed Lua Core source code which is used by test 
 
 Examples overview:
 ### Simple examples
-    * `examples/simple/source1.tlc`
-        TODO
-    * `examples/simple/source2.tlc`
-        TODO
-    * `examples/simple/source3.tlc`
-        TODO
+* `examples/simple/source1.tlc`
+```
+local res:number, a:integer, b:number = 0, 1, 0.5 in
+    res = a + b
+```
+Basic typed local declaration, show binary operations and that adding `number` to `integer` gives `number`.
+* `examples/simple/source2.tlc`
+```
+local len:integer, word:string = 0, "testingWord" in
+    len = #word
+```
+Example of unary operation - hash - which returns `integer`.
+* `examples/simple/source3.tlc`
+```
+local _ENV:{"b":integer}_unique = {["b"]=0} in  
+    local a = 2 in 
+        b = a + 2
+```
+Example of using global variables - firstly we need to declare them explicitly in outer table - `_ENV`, then compiler resolves `b` to `_ENV["b"]`.
 
 ### Statements
-    * `examples/statements/source1.tlc`
+* `examples/statements/source1.tlc`
+```
+local error,result = "",1 in
+local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
+        local q,r = 0,0 in
+            if divisor == 0 then
+                return nil, "divZero"
+            else
+                r = dividend / divisor;
+                q = dividend % r;
+                return q, r 
+in
+    local p,q = idiv(10,2) in
+        if p then result = q else error =  q
+                
+```
+Example which briefly depicts work of projection types. `idiv` has type `integer,integer` or `nil,string`. Inside `if` statement we can project union of these tuples for proper type. Inside `then` variable `q` has type `integer`, inside `else` - `string`.
 ### Tables
     * `examples/tables/source1.tlc`
         TODO
@@ -209,7 +238,7 @@ Generated binary should be run with one arg - path to file you want to parse and
 Tests are divided into following groups:
 * Parser `test/Test/Parser.hs`
 * Typechecker
-	* Subtyping `test/Test/Typechecker/Subtyping.hs`
-	* Typechecking `test/Test/Typechecker/Typechecker.hs`  
+    * Subtyping `test/Test/Typechecker/Subtyping.hs`
+    * Typechecking `test/Test/Typechecker/Typechecker.hs`  
 
 Test suite can be executed with command `stack test`.
