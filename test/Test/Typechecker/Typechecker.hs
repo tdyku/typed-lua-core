@@ -67,11 +67,13 @@ tables = describe "Tables" $ do
     it "Table refinement" $ isCorrect $ typeCheck source2
     it "Aliasing unique tables" $ shouldFail $ typeCheck source3
     it "Types coercion" $ isCorrect $ typeCheck source4
+    it "Unique-closed subtyping" $ isCorrect $ typeCheck source5
     where path = "examples/tables/"
           source1 = path ++ "source1.tlc"
           source2 = path ++ "source2.tlc"
           source3 = path ++ "source3.tlc"
           source4 = path ++ "source4.tlc"
+          source5 = path ++ "source5.tlc"
 
 objects :: Spec
 objects = describe "Methods and objects" $ do

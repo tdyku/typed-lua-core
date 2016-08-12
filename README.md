@@ -123,6 +123,7 @@ Statement typing rules implemented during GSOC 2016:
 * while & if
 * return statement
 * void function and method call
+
 ##### Expressions typing rules
 Rules can be edited/extended by adding entries to function `getTypeExp`.
 
