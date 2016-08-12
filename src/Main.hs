@@ -1,11 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 
-import           Text.Trifecta.Parser (parseFromFile)
-import           Text.Show.Pretty     (ppShow)
-import           System.Environment   (getArgs)
+import           Text.Trifecta.Parser  (parseString)
+import           Text.Trifecta.Result  (Result(..))
+import           Text.Show.Pretty      (ppShow)
+import           System.Environment    (getArgs)
 
-import           Parser.Code          (pManyStm)
+import           Parser.Code           (pManyStm)
 import           Parser.Types
+import           Parser.Comments       (preCompilation)
 import           Typechecker.Utils     (runTypechecker)
 import           Typechecker.Type      (tBlock)
 import           Transform.Globals     (runGlobalTransform)
@@ -19,14 +21,15 @@ main = do
         _ -> putStrLn "Too much arguments. Give ONE path"
 
 compile :: String -> IO ()
-compile fpath = parseFromFile pManyStm fpath
-          >>= \case 
-              Nothing  -> return ()
-              Just res -> do
-                transformedRes <- runGlobalTransform res
-                putStrLn . ppShow $ transformedRes
-                checkedRes <- runTypechecker transformedRes tBlock
-                case checkedRes of
-                  Right () -> putStrLn "correct!"
-                  Left err -> putStrLn err
+compile fpath = do
+    withoutComments <- preCompilation fpath
+    case parseString pManyStm mempty withoutComments of
+        Failure _ -> return ()
+        Success res -> do
+          transformedRes <- runGlobalTransform res
+          putStrLn . ppShow $ transformedRes
+          checkedRes <- runTypechecker transformedRes tBlock
+          case checkedRes of
+            Right () -> putStrLn "correct!"
+            Left err -> putStrLn err
 
