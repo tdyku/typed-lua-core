@@ -1,3 +1,4 @@
+--Basic table refinement - we construct unique table {} but then extend it with new fields.
 local person = {} in
     person["firstname"] <string> = "Lou";
     person["lastname"] <string> = "Reed"

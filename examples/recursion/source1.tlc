@@ -1,2 +1,3 @@
+--Example of unfolding recursion rule - we are using it to replace x with ux.F itself.
 rec a : ux.{"next":(x|nil)} = {["next"]={["next"] = nil  }} in
     skip

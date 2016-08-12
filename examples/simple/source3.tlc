@@ -1,3 +1,4 @@
+--Example of using global variables - firstly we need to declare them explicitly in outer table - _ENV, then compiler resolves b to _ENV["b"].
 local _ENV:{"b":integer}_open = {["b"]=0} in  
     local a = 2 in 
         b = a + 2

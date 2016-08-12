@@ -13,6 +13,7 @@ library
                  , Parser.Types   
                  , Parser.Code    
                  , Parser.Utils     
+                 , Parser.Comments
                  , Typechecker.Type   
                  , Typechecker.Utils    
                  , Typechecker.Subtype    
@@ -26,6 +27,8 @@ library
                      , mtl    
                      , containers   
                      , lens   
+                     , regex-compat
+
   hs-source-dirs:      src    
   default-language:    Haskell2010
 
@@ -39,6 +42,7 @@ executable coreTL
                ,  mtl 
                ,  containers
                ,  lens
+               ,  regex-compat
   default-language: Haskell2010
 
 

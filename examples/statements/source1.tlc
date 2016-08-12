@@ -1,3 +1,6 @@
+--Example which briefly depicts work of projection types. idiv has type integer,integer or nil,string. 
+--Inside if statement we can project union of these 
+--tuples for proper type. Inside then variable q has type integer, inside else - string.
 local error,result = "",1 in
 local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
         local q,r = 0,0 in

@@ -1,3 +1,7 @@
+--Type coercion in work - coercion converts the type of a from {"x" : string, "y" : string}_unique to 
+--{"x" : string, "y" : string|nil}_open, and results in 
+--{"x" : string, "y" : string|nil}_closed, which is a subtype of 
+--{"x" : string, "y" : string|nil}_closed, the type of b.
 local a : {}_unique = {} in
     a["x"] <string> = "foo";
     a["y"] <string> = "bar";

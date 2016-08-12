@@ -1,2 +1,3 @@
+--This example typechecks because of subtyping rules between closed and unique tables.
 local b:{string:(integer|nil), "z":(1|nil)}_closed = {["x"]=1, ["y"]=2} in
    skip   

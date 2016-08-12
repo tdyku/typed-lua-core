@@ -1,3 +1,5 @@
+--Here we are also adding method to table, but this time similar method already existed in table. 
+--It is possible because type of method is subtype of existing method.
 local tab:{"a":(number) -> (number)}_unique 
         = { ["a"] = fun(x:number):(number) return x } in
     fun tab:a(age:number):(number) return age

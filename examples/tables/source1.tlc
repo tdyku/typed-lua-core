@@ -1,3 +1,6 @@
+--Basic table construction - we constructed table of type 
+--{"x":integer, "y":integer, 1:(integer|nil), 2:(integer|string)}.
+
 local idiv = fun(dividend:integer, divisor:integer): ((integer, integer)|(nil, string))
     skip 
 in

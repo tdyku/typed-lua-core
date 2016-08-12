@@ -1,3 +1,5 @@
+--Example of code which won't typecheck as aliasing a
+--produces the type {}_closed that is not a subtype of {}_open.
 local a : {}_unique = {} in
 local b : {}_open = a in
     a["x"] <string> = "foo";

@@ -1,2 +1,3 @@
+--Basic metatable example - we are setting metatable for this method to already set one - tab.
 local tab = {} in
     fun tab:foo():(number) |setmetatable({}, {["index"] = tab})|; return 0
