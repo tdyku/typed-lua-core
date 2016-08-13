@@ -1,0 +1,3 @@
+local variadicTest:(string*) -> (string*) = fun (...:string):(string*)
+                                                return ...
+in |variadicTest("test")|
