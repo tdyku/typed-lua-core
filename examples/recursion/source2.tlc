@@ -1,0 +1,7 @@
+-- Amber and assumption rule demonstration:
+-- At first, we are assuming y is subtype of x
+-- Then, by amber rule, uy is subtype of ux
+local c:any = nil in
+local a:ux.{x:any} = c in
+local b:uy.{y:any}_closed = c in
+    b = a
