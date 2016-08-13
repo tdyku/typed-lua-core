@@ -176,3 +176,6 @@ Tests are divided into following groups:
     * Typechecking `test/Test/Typechecker/Typechecker.hs`  
 
 Test suite can be executed with command `stack test`.
+
+# TODO
+Error information both for parser and typechecker is not good enough - it should contain information of error column and line. For now typechecker logs just errors like `"x is not subtype of y"` or `"table x does not contains y of type z"`, however, without some global information where you should look for error. Also sometimes parser instead of throwing error just returns empty program or gives to general information.
