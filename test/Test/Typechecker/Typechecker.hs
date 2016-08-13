@@ -94,10 +94,11 @@ recursion :: Spec
 recursion = describe "Recursive types" $ do
     it "Recursive declaration" $ isCorrect $ typeCheck source1
     it "Amber rule and assumption" $ isCorrect $ typeCheck source2
+    it "Deep recursion test" $ isCorrect $ typeCheck source3
     where path = "examples/recursion/"
           source1 = path ++ "source1.tlc"
           source2 = path ++ "source2.tlc"
-
+          source3 = path ++ "source3.tlc"
 
 
 metatable :: Spec
