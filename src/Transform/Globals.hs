@@ -37,7 +37,7 @@ popScope = do
 isLocal :: String -> GlobalTransform Bool
 isLocal nm = do
     scopes <- get
-    return $ (nm `elem` ["type", "setmetatable"]) || (anyT $ fmap (nm `elem`) (scopes ^. locals))
+    return $ (nm `elem` ["type", "setmetatable", "self"]) || (anyT $ fmap (nm `elem`) (scopes ^. locals))
     where anyT = elem True
 
 
