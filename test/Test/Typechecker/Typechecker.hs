@@ -91,7 +91,7 @@ objects = describe "Methods and objects" $ do
           source3 = path ++ "source3.tlc"
 
 recursion :: Spec
-recursion = describe "Recursive types" $
+recursion = describe "Recursive types" $ do
     it "Recursive declaration" $ isCorrect $ typeCheck source1
     it "Amber rule and assumption" $ isCorrect $ typeCheck source2
     where path = "examples/recursion/"
