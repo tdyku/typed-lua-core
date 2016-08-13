@@ -57,9 +57,15 @@ binOps = describe "Simple expressions" $ do
 
 statements :: Spec
 statements = describe "Statements" $ do
-    it "Projection types" $ isCorrect $ typeCheck source
+    it "Projection types" $ isCorrect $ typeCheck source1
+    it "Variadic arguments test" $ isCorrect $ typeCheck source2
+    --it "Recursive function - fibbonacie sequence" $ isCorrect $ typeCheck source3
+    --it "Another function - gcd" $ isCorrect $ typeCheck source4
     where path = "examples/statements/"
-          source = path ++ "source1.tlc"
+          source1 = path ++ "source1.tlc"
+          source2 = path ++ "source2.tlc"
+          source3 = path ++ "source3.tlc"
+          source4 = path ++ "source4.tlc"
 
 tables :: Spec
 tables = describe "Tables" $ do

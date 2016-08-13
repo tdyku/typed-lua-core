@@ -37,7 +37,7 @@ popScope = do
 isLocal :: String -> GlobalTransform Bool
 isLocal nm = do
     scopes <- get
-    return $ anyT $ fmap (nm `elem`) (scopes ^. locals)
+    return $ (nm `elem` ["type", "setmetatable"]) || (anyT $ fmap (nm `elem`) (scopes ^. locals))
     where anyT = elem True
 
 
@@ -113,9 +113,7 @@ transformExpr ExpTrue = return ExpTrue
 transformExpr v@(ExpVar id) = 
     isLocal id >>= \case 
           True -> return v
-          False -> if id == "setmetatable" 
-                   then return v
-                   else return $ ExpTableAccess (ExpVar "_ENV") (ExpString id)
+          False ->return $ ExpTableAccess (ExpVar "_ENV") (ExpString id)
 
 transformExpr (ExpTableAccess tab el) = do
     tab' <- transformExpr tab

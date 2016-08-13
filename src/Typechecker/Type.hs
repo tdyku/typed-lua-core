@@ -302,8 +302,8 @@ tIF (StmIf cond tBlk eBlk) =
                 tBlock eBlk
                 popPiScope)
         _ -> normalCase cond tBlk eBlk
-    ExpABinOp Equals (ExpOneResult (FunAppl (ExpVar "type") (ExprList [ExpVar "id"] Nothing))) (ExpString "string") -> do
-      idType <- lookupGamma "id"
+    ExpABinOp Equals (ExpOneResult (FunAppl (ExpVar "type") (ExprList [ExpVar id] Nothing))) (ExpString "string") -> do
+      idType <- lookupGamma id
       case idType of
         TFilter f1 f2 -> do
           let rT = fit f2 (FB BString)
@@ -312,7 +312,7 @@ tIF (StmIf cond tBlk eBlk) =
           then (do
             newGammaScope
             let (RF fE) = rE
-            insertToGamma "id" (TFilter f1 fE)
+            insertToGamma id (TFilter f1 fE)
             tBlock eBlk
             popGammaScope
             )
@@ -320,7 +320,7 @@ tIF (StmIf cond tBlk eBlk) =
                then (do
                 newGammaScope
                 let (RF fT) = rT
-                insertToGamma "id" (TFilter f1 fT)
+                insertToGamma id (TFilter f1 fT)
                 tBlock tBlk
                 popGammaScope
                 )
@@ -328,11 +328,11 @@ tIF (StmIf cond tBlk eBlk) =
                 let (RF fT) = rT
                 let (RF fE) = rE
                 newGammaScope
-                insertToGamma "id" (TFilter f1 fT)
+                insertToGamma id (TFilter f1 fT)
                 tBlock tBlk
                 popGammaScope
                 newGammaScope
-                insertToGamma "id" (TFilter f1 fE)
+                insertToGamma id (TFilter f1 fE)
                 tBlock eBlk
                 popGammaScope
                 )
@@ -420,6 +420,7 @@ getTypeExp = \case
     f@ExpFunDecl{}               -> TF <$> tFun f
     t@(ExpTableConstructor es a) -> TF <$> tConstr es a
     a@ExpTableAccess{}           -> TF <$> tIndexRead a
+    x -> error $ show x
 
 
 tCoercion :: Expr -> TypeState F

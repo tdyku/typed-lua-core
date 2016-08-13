@@ -193,3 +193,4 @@ s2f (SUnion ps) =
 
 tableType :: F -> TType
 tableType (FTable _ tp) = tp
+tableType (FRecursive _ f) = tableType f
