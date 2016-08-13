@@ -59,7 +59,7 @@ statements :: Spec
 statements = describe "Statements" $ do
     it "Projection types" $ isCorrect $ typeCheck source1
     it "Variadic arguments test" $ isCorrect $ typeCheck source2
-    --it "Recursive function - fibbonacie sequence" $ isCorrect $ typeCheck source3
+    it "While, function, binops, return - gcd" $ isCorrect $ typeCheck source3
     --it "Function and while - gcd" $ isCorrect $ typeCheck source4
     where path = "examples/statements/"
           source1 = path ++ "source1.tlc"

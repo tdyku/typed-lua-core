@@ -1,0 +1,18 @@
+-- greatest common divisor
+--int c;
+--gcd ( int a, int b )
+--{
+--  int c;
+--  while ( a != 0 ) {
+--     c = a; a = b%a;  b = c;
+--  }
+--  return b;
+--}
+local gcd:(integer, integer) -> (integer) = fun (a:integer, b:integer):(integer)
+                                                local c:integer = 0 in
+                                                    while a < 0 do
+                                                        c = a;
+                                                        a = b % a;
+                                                        b = c;
+                                                    return b
+in |gcd(10,5)|
