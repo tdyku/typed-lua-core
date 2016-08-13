@@ -1,0 +1,11 @@
+-- Some getters and setters, usage of self
+
+local person:{"name":string, "friends":{integer:(string|nil)}, "friendsNumber":integer} =
+             {["name"] = "Joe", ["friends"] = {[0]=nil}, ["friendsNumber"] = 0}
+in  fun person:setName(name:string):(integer) 
+            self["name"] = name; 
+            return 0	
+    fun person:getName():(string) 
+            return self["name"]
+    fun person:getFriends():({integer:(string|nil)}) 
+            return self["friends"]

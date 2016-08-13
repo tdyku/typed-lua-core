@@ -60,7 +60,6 @@ statements = describe "Statements" $ do
     it "Projection types" $ isCorrect $ typeCheck source1
     it "Variadic arguments test" $ isCorrect $ typeCheck source2
     it "While, function, binops, return - gcd" $ isCorrect $ typeCheck source3
-    --it "Function and while - gcd" $ isCorrect $ typeCheck source4
     where path = "examples/statements/"
           source1 = path ++ "source1.tlc"
           source2 = path ++ "source2.tlc"
@@ -85,9 +84,11 @@ objects :: Spec
 objects = describe "Methods and objects" $ do
     it "Basic method typechecking" $ isCorrect $ typeCheck source1  
     it "Adding new method - subtype of another one" $ isCorrect $ typeCheck source2
+    it "Getters and setters - usage of self" $ isCorrect $ typeCheck source3
     where path = "examples/objects/"
           source1 = path ++ "source1.tlc"
           source2 = path ++ "source2.tlc"
+          source3 = path ++ "source3.tlc"
 
 recursion :: Spec
 recursion = describe "Recursive types" $
